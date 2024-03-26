@@ -48,7 +48,7 @@ let ast = {
     },
     elseifClause: function(condition, body) {
         return {
-            type: 'ElseifClause',
+            type: 'ElseIfClause',
             condition: condition,
             body: body
         };
@@ -95,6 +95,14 @@ let ast = {
     assignmentStatement: function(variables, init) {
         return {
             type: 'AssignmentStatement',
+            variables: variables,
+            init: init
+        };
+    },
+
+    operationAssignment: function(variables, init) {
+        return {
+            type: 'OperationAssignment',
             variables: variables,
             init: init
         };
@@ -149,6 +157,13 @@ let ast = {
     chunk: function(body) {
         return {
             type: 'Chunk',
+            body: body
+        };
+    },
+
+    asyncStatement: function(body) {
+        return {
+            type: 'AsyncStatement',
             body: body
         };
     },
