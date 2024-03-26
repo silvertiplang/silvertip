@@ -1,0 +1,224 @@
+/*
+    lex.js
+
+    convert source code into tokens
+*/
+
+
+
+
+const { error } = require("./utils");
+
+
+
+
+/*
+makeMap: Make a map from the values of an array
+array: array of values
+return: map where you can index it with the value and it will return true
+*/
+function makeMap(array) {
+    let map = {};
+    for (let i = 0; i < array.length; i++) {
+        map[array[i]] = true;
+    }
+    return map;
+}
+
+// text maps of each token
+const text = {
+    identifier1: makeMap(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']),
+    identifier2: makeMap(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9']),
+    symbol: makeMap(['/', '*', '(', ')', '-', '>', '.', '{', '}', ',', ':', '[', ']', '=', '+', '%', '^', '!', '<', '&', '|']),
+    shortString: makeMap(['\'', '"']),
+    shortStringEscape: makeMap(['\\']),
+    longString: makeMap(['`']),
+    whitespace: makeMap([' ', '\t', '\n', '\r']),
+    number1: makeMap(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']),
+    number2: makeMap(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', 'e']),
+
+    
+    operator: makeMap(['+', '-', '*', '/', '%', '^', '==', '!=', '<', '<=', '>', '>=', '&&', '||', '!']),
+    comment: {
+        start: '/*',
+        // end: '*/', // TODO: Unhardcode
+    },
+    keyword: makeMap(['local', 'global', 'function', 'return', 'while', 'until', 'repeat', 'break', 'continue', 'if', 'elseif', 'else', 'async', 'true', 'false', 'null']),
+
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar#escape_sequences
+    escape: {
+        ['\\']: '\\',
+        t: '\t',
+        v: '\v',
+        f: '\f',
+        n: '\n',
+        r: '\r'
+    },
+};
+
+function lex(src) {
+    let state = {
+        in: false, // false, 'shortString', 'longString'
+        stringStart: '',
+        current: '',
+        escape: false,
+
+        // flags
+        skipstatecheck: false, // Triggered when string ends, to prevent another string from beginning
+    }
+
+    let tokens = [];
+    // One extra loop so that last token can be pushed
+    for (let i = 0; i < src.length + 1; i++) {
+        // console.log(i, state);
+        let s;
+        if (i > src.length - 1) {
+            if (state.in == false) {
+                break;
+            }
+            // Forcefully push last token
+            s = null;
+            state.skipstatecheck = true;
+        } else {
+            s = src[i];
+        }
+        if (state.in == 'identifier') {
+            if (text.identifier2[s]) {
+                state.current += s;
+            } else {
+                tokens.push({
+                    type: text.keyword[state.current] ? 'keyword' : 'identifier',
+                    value: state.current,
+                });
+                state.in = false;
+            }
+        } else if (state.in == 'symbol') {
+            if (text.symbol[s]) {
+                state.current += s;
+            } else {
+                tokens.push({
+                    type: text.operator[state.current] ? 'operator' : 'symbol',
+                    value: state.current,
+                });
+                state.in = false;
+            }
+            if (state.current == text.comment.start) {
+                state.in = 'comment';
+                state.current = '';
+            }
+        } else if (state.in == 'shortString') {
+            if (state.escape) {
+                let e = text.escape[s];
+                if (!e) {
+                    error(`Invalid escape sequence '\\${s}'`);
+                }
+                state.current += e;
+                state.escape = false;
+            } else {
+                if (text.shortStringEscape[s]) {
+                    state.escape = true;
+                } else if (s == state.stringStart) {
+                    tokens.push({
+                        type: 'string',
+                        value: state.current,
+                    });
+                    state.in = false;
+                    state.skipstatecheck = true;
+                } else {
+                    state.current += s;
+                }
+            }
+        } else if (state.in == 'longString') {
+            if (state.escape) {
+                let e = text.escape[s];
+                if (!e) {
+                    error(`Invalid escape sequence '\\${s}'`);
+                }
+                state.current += e;
+                state.escape = false;
+            } else {
+                if (text.shortStringEscape[s]) {
+                    state.escape = true;
+                } else if (s == state.stringStart) {
+                    tokens.push({
+                        type: 'string',
+                        value: state.current,
+                    });
+                    state.in = false;
+                    state.skipstatecheck = true;
+                } else {
+                    state.current += s;
+                }
+            }
+        } else if (state.in == 'whitespace') {
+            if (text.whitespace[s]) {
+                state.current += s;
+            } else {
+                tokens.push({
+                    type: 'whitespace',
+                    value: state.current,
+                });
+                state.in = false;
+            }
+        } else if (state.in == 'number') {
+            if (text.number2[s]) {
+                state.current += s;
+            } else {
+                tokens.push({
+                    type: 'number',
+                    value: state.current,
+                });
+                state.in = false;
+            }
+        } else if (state.in == 'comment') {
+            if (src[i - 1] == '*' && s == '/') {
+                tokens.push({
+                    type: 'comment',
+                    value: state.current.substring(0, state.current.length - 1),
+                });
+                state.in = false;
+                state.skipstatecheck = true;
+            } else {
+                state.current += s;
+            }
+        } else if (state.in == false) {
+
+        } else {
+            // Invalid state, should never happen
+        }
+        
+        if (state.skipstatecheck) {
+            state.skipstatecheck = false;
+        } else if (state.in == false) {
+            if (text.identifier1[s]) {
+                state.in = 'identifier';
+                state.current = s;
+            } else if (text.symbol[s]) {
+                state.in = 'symbol';
+                state.current = s;
+            } else if (text.shortString[s]) {
+                state.in = 'shortString';
+                state.current = '';
+                state.stringStart = s;
+            } else if (text.longString[s]) {
+                state.in = 'longString';
+                state.current = '';
+                state.stringStart = s;
+            } else if (text.whitespace[s]) {
+                state.in = 'whitespace';
+                state.current = s;
+            } else if (text.number1[s]) {
+                state.in = 'number';
+                state.current = s;
+            } else {
+                // Invalid character, might happen
+                error(`Invalid character '${s}'`);
+            }
+        }
+    }
+
+    return tokens;
+}
+
+
+module.exports = lex;
