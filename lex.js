@@ -212,7 +212,7 @@ function lex(src) {
             }
             default: {
                 // Invalid state, should never happen
-                error(`Invalid state '${state.in}', should never happen`)
+                error(`Invalid state '${state.in}', should never happen`);
             }
         }
 
