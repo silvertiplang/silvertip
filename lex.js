@@ -58,15 +58,24 @@ const text = {
 
 function lex(src) {
     let state = {
-        in: false, // false, 'shortString', 'longString'
-        stringStart: '',
-        current: '',
-        escape: false,
+        in: false, // false, 'identifier', 'symbol', 'comment', 'whitespace', 'number', 'shortString', 'longString'
+        stringStart: '', // Starting character of string, ex: '
+        current: '', // Current value of next token
+        escape: false, // Escape next character of string?
 
         // flags
         skipstatecheck: false, // Triggered when string ends, to prevent another string from beginning
     }
 
+    /*
+    tokens = [
+        {
+            type: (identifier, keyword, symbol, operator, comment, string, whitespace, number),
+            value: '...',
+        },
+        ...
+    ]
+    */
     let tokens = [];
     // One extra loop so that last token can be pushed
     for (let i = 0; i < src.length + 1; i++) {
