@@ -82,110 +82,134 @@ function lex(src) {
         } else {
             s = src[i];
         }
-        if (state.in == 'identifier') {
-            if (text.identifier2[s]) {
-                state.current += s;
-            } else {
-                tokens.push({
-                    type: text.keyword[state.current] ? 'keyword' : 'identifier',
-                    value: state.current,
-                });
-                state.in = false;
-            }
-        } else if (state.in == 'symbol') {
-            if (text.symbol[s]) {
-                state.current += s;
-            } else {
-                tokens.push({
-                    type: text.operator[state.current] ? 'operator' : 'symbol',
-                    value: state.current,
-                });
-                state.in = false;
-            }
-            if (state.current == text.comment.start) {
-                state.in = 'comment';
-                state.current = '';
-            }
-        } else if (state.in == 'shortString') {
-            if (state.escape) {
-                let e = text.escape[s];
-                if (!e) {
-                    error(`Invalid escape sequence '\\${s}'`);
-                }
-                state.current += e;
-                state.escape = false;
-            } else {
-                if (text.shortStringEscape[s]) {
-                    state.escape = true;
-                } else if (s == state.stringStart) {
-                    tokens.push({
-                        type: 'string',
-                        value: state.current,
-                    });
-                    state.in = false;
-                    state.skipstatecheck = true;
-                } else {
-                    state.current += s;
-                }
-            }
-        } else if (state.in == 'longString') {
-            if (state.escape) {
-                let e = text.escape[s];
-                if (!e) {
-                    error(`Invalid escape sequence '\\${s}'`);
-                }
-                state.current += e;
-                state.escape = false;
-            } else {
-                if (text.shortStringEscape[s]) {
-                    state.escape = true;
-                } else if (s == state.stringStart) {
-                    tokens.push({
-                        type: 'string',
-                        value: state.current,
-                    });
-                    state.in = false;
-                    state.skipstatecheck = true;
-                } else {
-                    state.current += s;
-                }
-            }
-        } else if (state.in == 'whitespace') {
-            if (text.whitespace[s]) {
-                state.current += s;
-            } else {
-                tokens.push({
-                    type: 'whitespace',
-                    value: state.current,
-                });
-                state.in = false;
-            }
-        } else if (state.in == 'number') {
-            if (text.number2[s]) {
-                state.current += s;
-            } else {
-                tokens.push({
-                    type: 'number',
-                    value: state.current,
-                });
-                state.in = false;
-            }
-        } else if (state.in == 'comment') {
-            if (src[i - 1] == '*' && s == '/') {
-                tokens.push({
-                    type: 'comment',
-                    value: state.current.substring(0, state.current.length - 1),
-                });
-                state.in = false;
-                state.skipstatecheck = true;
-            } else {
-                state.current += s;
-            }
-        } else if (state.in == false) {
 
-        } else {
-            // Invalid state, should never happen
+        switch (state.in) {
+            case 'identifier': {
+                if (text.identifier2[s]) {
+                    state.current += s;
+                } else {
+                    tokens.push({
+                        type: text.keyword[state.current] ? 'keyword' : 'identifier',
+                        value: state.current,
+                    });
+                    state.in = false;
+                }
+                break;
+            }
+            case 'symbol': {
+                if (text.symbol[s]) {
+                    state.current += s;
+                } else {
+                    tokens.push({
+                        type: text.operator[state.current] ? 'operator' : 'symbol',
+                        value: state.current,
+                    });
+                    state.in = false;
+                }
+                if (state.current == text.comment.start) {
+                    state.in = 'comment';
+                    state.current = '';
+                }
+                break;
+            }
+            case 'shortString': {
+                if (state.escape) {
+                    let e = text.escape[s];
+                    if (!e) {
+                        error(`Invalid escape sequence '\\${s}'`);
+                    }
+                    state.current += e;
+                    state.escape = false;
+                } else {
+                    if (text.shortStringEscape[s]) {
+                        state.escape = true;
+                    } else if (s == state.stringStart) {
+                        tokens.push({
+                            type: 'string',
+                            value: state.current,
+                        });
+                        state.in = false;
+                        state.skipstatecheck = true;
+                    } else {
+                        state.current += s;
+                    }
+                }
+                break;
+            }
+            case 'longString': {
+                if (state.escape) {
+                    let e = text.escape[s];
+                    if (!e) {
+                        error(`Invalid escape sequence '\\${s}'`);
+                    }
+                    state.current += e;
+                    state.escape = false;
+                } else {
+                    if (text.shortStringEscape[s]) {
+                        state.escape = true;
+                    } else if (s == state.stringStart) {
+                        tokens.push({
+                            type: 'string',
+                            value: state.current,
+                        });
+                        state.in = false;
+                        state.skipstatecheck = true;
+                    } else {
+                        state.current += s;
+                    }
+                }
+                break;
+            }
+            case 'whitespace': {
+                if (text.whitespace[s]) {
+                    state.current += s;
+                } else {
+                    tokens.push({
+                        type: 'whitespace',
+                        value: state.current,
+                    });
+                    state.in = false;
+                }
+                break;
+            }
+            case 'number': {
+                if (text.number2[s]) {
+                    state.current += s;
+                } else {
+                    tokens.push({
+                        type: 'number',
+                        value: state.current,
+                    });
+                    state.in = false;
+                }
+                break;
+            }
+            case 'comment': {
+                if (src[i - 1] == '*' && s == '/') {
+                    tokens.push({
+                        type: 'comment',
+                        value: state.current.substring(0, state.current.length - 1),
+                    });
+                    state.in = false;
+                    state.skipstatecheck = true;
+                } else {
+                    state.current += s;
+                }
+                break;
+            }
+            case false: {
+                // Do nothing
+                break;
+            }
+            default: {
+                // Invalid state, should never happen
+                error(`Invalid state '${state.in}', should never happen`)
+            }
         }
+
+
+
+
         
         if (state.skipstatecheck) {
             state.skipstatecheck = false;
