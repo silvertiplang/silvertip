@@ -38,7 +38,9 @@ const text = {
     number2: makeMap(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', 'e']),
 
     
-    operator: makeMap(['+', '-', '*', '/', '%', '^', '==', '!=', '<', '<=', '>', '>=', '&&', '||', '!']),
+    operator: makeMap(['+', '-', '*', '/', '%', '^', '==', '!=', '<', '<=', '>', '>=', '&&', '||', '!',
+    // not operators but punctuator
+    '=', '->', '<-']),
     comment: {
         start: '/*',
         // end: '*/', // TODO: Unhardcode
@@ -56,6 +58,11 @@ const text = {
     },
 };
 
+
+/*
+there are 2 approaches: finite state machine and scanner
+we're using fsm, but i felt like scanner would be better...
+*/
 function lex(src) {
     let state = {
         in: false, // false, 'identifier', 'symbol', 'comment', 'whitespace', 'number', 'shortString', 'longString'
@@ -107,6 +114,14 @@ function lex(src) {
             }
             case 'symbol': {
                 if (text.symbol[s]) {
+                    let nextCurrent = state.current + s;
+                    if (!text.operator[nextCurrent] && !text.symbol[nextCurrent]) {
+                        tokens.push({
+                            type: 'symbol',
+                            value: state.current,
+                        });
+                        state.current = '';
+                    }
                     state.current += s;
                 } else {
                     tokens.push({
