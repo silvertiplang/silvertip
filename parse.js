@@ -255,6 +255,15 @@ let ast = {
 
 
 
+
+
+
+
+
+
+
+
+
 /*
 AST: based off https://github.com/fstirlitz/luaparse
 Nodes: 
@@ -263,22 +272,110 @@ Nodes:
 }
 */
 function parse(tokens) {
-    let out = {}; // Root of the tree
+    let out = ast.chunk([]); // Root of the tree
     let node = out; // Current node
-    for (let i = 0; i < tokens.length; i++) {
-        let token = tokens[i];
 
-        switch (token.type) {
+    let i;
+
+    function getNext(i) {
+        if (i <= tokens.length - 1) {
+            return tokens[i + 1];
+        } else {
+            return null;
+        }
+    }
+
+    function consume(expectedType) {
+        i++;
+        let token = tokens[i];
+        if (token.type != expectedType) {
+            error(`Consume mismatch: Type '${expectedType}' expected, got '${token.type}'`)
+        }
+        return token;
+    }
+
+    function parseToken(token) {
+        switch (type) {
             case 'identifier': {
                 
                 break;
             }
             case 'keyword': {
+                switch (value) {
+                    case 'local': {
+                        let variables = [];
+                        let init = [];
+                        
+                        node.body.push(ast.localStatement(variables, init));
+                        break;
+                    }
+                    case 'global': {
 
+                        break;
+                    }
+                    case 'function': {
+
+                        break;
+                    }
+                    case 'return': {
+
+                        break;
+                    }
+                    case 'while': {
+
+                        break;
+                    }
+                    case 'until': {
+
+                        break;
+                    }
+                    case 'repeat': {
+
+                        break;
+                    }
+                    case 'break': {
+
+                        break;
+                    }
+                    case 'continue': {
+
+                        break;
+                    }
+                    case 'if': {
+
+                        break;
+                    }
+                    case 'elseif': {
+
+                        break;
+                    }
+                    case 'else': {
+
+                        break;
+                    }
+                    case 'async': {
+
+                        break;
+                    }
+                    case 'true': {
+
+                        break;
+                    }
+                    case 'false': {
+
+                        break;
+                    }
+                    case 'null': {
+
+                        break;
+                    }
+                    default: {
+                        error(`Invalid keyword '${value}'`);
+                    }
+                }
                 break;
             }
             case 'symbol': {
-
                 break;
             }
             case 'operator': {
@@ -298,13 +395,21 @@ function parse(tokens) {
                 break;
             }
             case 'number': {
-
+                
                 break;
             }
             default: {
                 error(`Invalid token type '${token.type}'`);
             }
         }
+    }
+
+    for (i = 0; i < tokens.length; i++) {
+        let token = tokens[i];
+        // let type = token.type;
+        // let value = token.value;
+
+        parseToken(token);
     }
 
     return out;
