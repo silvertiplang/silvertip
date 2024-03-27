@@ -43,6 +43,7 @@ const text = {
     '=', '->', '<-']),
     comment: {
         start: '/*',
+        shortStart: '//',
         // end: '*/', // TODO: Unhardcode
     },
     keyword: makeMap(['local', 'global', 'function', 'return', 'while', 'until', 'repeat', 'break', 'continue', 'if', 'elseif', 'else', 'async', 'true', 'false', 'null']),
@@ -115,14 +116,19 @@ function lex(src) {
             case 'symbol': {
                 if (text.symbol[s]) {
                     let nextCurrent = state.current + s;
-                    if (!text.operator[nextCurrent] && !text.symbol[nextCurrent]) {
-                        tokens.push({
-                            type: 'symbol',
-                            value: state.current,
-                        });
+                    if (nextCurrent == text.comment.shortStart) {
+                        state.in = 'shortComment';
                         state.current = '';
+                    } else {
+                        if (!text.operator[nextCurrent] && !text.symbol[nextCurrent]) {
+                            tokens.push({
+                                type: 'symbol',
+                                value: state.current,
+                            });
+                            state.current = '';
+                        }
+                        state.current += s;
                     }
-                    state.current += s;
                 } else {
                     tokens.push({
                         type: text.operator[state.current] ? 'operator' : 'symbol',
@@ -213,6 +219,19 @@ function lex(src) {
                     tokens.push({
                         type: 'comment',
                         value: state.current.substring(0, state.current.length - 1),
+                    });
+                    state.in = false;
+                    state.skipstatecheck = true;
+                } else {
+                    state.current += s;
+                }
+                break;
+            }
+            case 'shortComment': {
+                if (s == '\n') {
+                    tokens.push({
+                        type: 'comment',
+                        value: state.current.substring(0, state.current),
                     });
                     state.in = false;
                     state.skipstatecheck = true;

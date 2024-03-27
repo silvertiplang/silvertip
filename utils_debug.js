@@ -7,6 +7,10 @@
 
 
 
+function printToken(token) {
+    console.log(token.type + ' ' + JSON.stringify(token.value));
+}
+
 function printTokens(tokens) {
     let out = [];
     for (let i = 0; i < tokens.length; i++) {
@@ -28,4 +32,4 @@ function concatTokens(tokens) {
 }
 
 
-module.exports = {printTokens, concatTokens};
+module.exports = {printToken, printTokens, concatTokens};

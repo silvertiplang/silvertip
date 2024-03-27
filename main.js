@@ -8,14 +8,17 @@
 
 
 const lex = require('./lex.js');
+const parse = require('./parse.js');
 const { printTokens, concatTokens } = require('./utils_debug.js');
 
 
 
 function main(src) {
     let tokens = lex(src);
-    printTokens(tokens);
+    // printTokens(tokens);
 
+    let ast = parse(tokens);
+    console.log(JSON.stringify(ast, null, 2));
 
 }
 
