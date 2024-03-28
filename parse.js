@@ -108,7 +108,7 @@ let ast = {
         };
     },
 
-    operationAssignment: function(operation, variables, init) { // ATODO
+    operationAssignment: function(operation, variables, init) {
         return {
             type: 'OperationAssignment',
             operation: operation,
@@ -497,6 +497,25 @@ function parse(tokens) {
         return current;
     }
 
+    let noList = false
+    function getAfterList(listType) {
+        if (noList) {
+            return -1;
+        }
+
+        let oldI = i;
+        let list = [];
+
+        noList = true;
+        parseList(list, listType);
+        noList = false;
+
+
+        let i2 = i;
+        i = oldI;
+        return i2;
+    }
+
 
     // DEBUG
     let lastToken = null;
@@ -512,12 +531,13 @@ function parse(tokens) {
 
         switch (token.type) {
             case 'identifier': {
+                let expectAfterListI = getAfterList('identifier');
                 i++;
                 if (!noCall && expect(i, 'symbol', '(')) {
                     let out = ast.callStatement(ast.identifier(token.value), []);
                     parseCallArguments(out.arguments);
                     return out;
-                } else if (!noAssignment && expect(i, 'operator', '=')) {
+                } else if (!noAssignment && expect(expectAfterListI, 'operator', '=')) {
                     i--;
                     let variables = [];
                     let init = [];
@@ -526,8 +546,8 @@ function parse(tokens) {
                     noAssignment = false;
                     
                     return ast.assignmentStatement(variables, init);
-                } else if (!noAssignment && expect(i, 'operator') && text.operationAssignment[tokens[i].value]) {
-                    let operation = tokens[i].value.substring(0, 1);
+                } else if (!noAssignment && expect(expectAfterListI, 'operator') && text.operationAssignment[tokens[expectAfterListI].value]) {
+                    let operation = tokens[expectAfterListI].value.substring(0, 1);
                     i--;
                     let variables = [];
                     let init = [];

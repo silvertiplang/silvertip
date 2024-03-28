@@ -1,28 +1,15 @@
-// 
+// // breakStatement
 // break
 
-// local a
-// local a = 1
-// local a, b, c = 1, 2, 3
-// local function a() {}
-// local function a(a, b, c) {}
-// function a() {}
-
-// global a
-// global a = 1
-// global a, b, c = 1, 2, 3
-
-// return 1
-// return 1, 2, 3
-
-// while 1 {}
-
-// repeat {}
-// repeat {} until 1
-
-
+// // continueStatement
 // continue
 
+// // returnStatement
+// return 1
+// return 1, 2, 3
+// return 1 + 2 + 3
+
+// // ifStatement, ifClause, elseIfClause, elseClause
 // if 1 {}
 // if 1 {} elseif 2 {}
 // if 1 {} elseif 2 {} elseif 3 {}
@@ -30,7 +17,51 @@
 // if 1 {} elseif 2 {} elseif 3 {} else {}
 // if 1 + 2 + 3 {}
 
+// // whileStatement
+// while 1 {}
+// while 1 + 2 + 3 {}
+
+// // repeatStatement
+// repeat {}
+// repeat {} until 1
+// repeat {} until 1 + 2 + 3
+
+// // localStatement, globalStatement, assignmentStatement
+
+// local a
+// local a = 1
+// local a, b, c = 1, 2, 3
+
+
+// local function a() {}
+// local function a(a, b, c) {}
+// function a() {}
+
+a = 1
+a, b, c = 1, 2, 3
+
+// // operationAssignment
+a += 1
+a, b, c += 1, 2, 3
+
+// // callStatement
+// a()
+// a(1, 2, 3)
+// a(1 + 2 + 3)
+
+// // forNumericStatement
+
+// // forGenericStatement
+
+// // chunk
+// // {}
+
+// // asyncStatement
 // async {}
+
+// // identifier
+
+// // literal
 
 // local a = true
 
@@ -38,22 +69,28 @@
 
 // local a = null
 
-// // comment
-
 // local a = 'string'
 
 // local a = 123
 
-// a = 2
+// // arrayEntry
 
-// a = 1 + 2 + 3
+// // tableEntry
 
-// a()
-// a(1, 2, 3)
+// // arrayConstructorExpression
 
+// // tableConstructorExpression
+
+// // binaryExpression
+// a + 1 + 2 + 3
+
+// // unaryExpression
 // a = -1
 
-// a = 'a' + 'b'
+// // indexExpression
 
-a += 1
+// // lambdaExpression
 
+// // comment
+
+// // whitespace
