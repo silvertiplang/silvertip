@@ -107,7 +107,7 @@ let ast = {
         };
     },
 
-    operationAssignment: function(variables, init) {
+    operationAssignment: function(variables, init) { // ATODO
         return {
             type: 'OperationAssignment',
             variables: variables,
@@ -150,7 +150,7 @@ let ast = {
     //     };
     // },
 
-    forNumericStatement: function(variable, start, end, step, body) {
+    forNumericStatement: function(variable, start, end, step, body) { // ATODO
         return {
             type: 'ForNumericStatement',
             variable: variable,
@@ -161,7 +161,7 @@ let ast = {
         };
     },
 
-    forGenericStatement: function(variables, iterators, body) {
+    forGenericStatement: function(variables, iterators, body) { // ATODO
         return {
             type: 'ForGenericStatement',
             variables: variables,
@@ -200,14 +200,14 @@ let ast = {
         };
     },
 
-    arrayEntry: function(value) {
+    arrayEntry: function(value) { // ATODO
         return {
             type: 'ArrayEntry',
             value: value
         };
     },
 
-    tableEntry: function(key, value) {
+    tableEntry: function(key, value) { // ATODO
         return {
             type: 'TableEntry',
             key: key,
@@ -215,13 +215,13 @@ let ast = {
         };
     },
     
-    arrayConstructorExpression: function(fields) {
+    arrayConstructorExpression: function(fields) { // ATODO
         return {
             type: 'ArrayConstructorExpression',
             fields: fields
         };
     },
-    tableConstructorExpression: function(fields) {
+    tableConstructorExpression: function(fields) { // ATODO
         return {
             type: 'TableConstructorExpression',
             fields: fields
@@ -244,14 +244,14 @@ let ast = {
             argument: argument
         };
     },
-    indexExpression: function(base, index) {
+    indexExpression: function(base, index) { // ATODO
         return {
             type: 'IndexExpression',
             base: base,
             index: index
         };
     },
-    lambdaExpression: function(parameters, body) {
+    lambdaExpression: function(parameters, body) { // ATODO
         return {
             type: 'LambdaExpression',
             parameters: parameters,
@@ -259,14 +259,14 @@ let ast = {
         };
     },
 
-    comment: function(value) {
+    comment: function(value) { // ATODO
         return {
             type: 'Comment',
             value: value,
         };
     },
 
-    whitespace: function(value) {
+    whitespace: function(value) { // ATODO
         return {
             type: 'Whitespace',
             value: value,
@@ -386,12 +386,21 @@ function parse(tokens) {
             }
         }
     }
-    function parseListAny(list) {
+    // Obsolete, since simple addition would trip this up
+    // function parseListAny(list) {
+    //     while (i < tokens.length) {
+    //         let t = tokens[i];
+    //         list.push(parseToken(t));
+    //         if (!expect(i, 'symbol', ',')) {
+    //             break;
+    //         }
+    //         i++;
+    //     }
+    // }
+    function parseListExpression(list) {
         while (i < tokens.length) {
-            let t = tokens[i];
-            list.push(parseToken(t));
+            list.push(parseExpression());
             if (!expect(i, 'symbol', ',')) {
-                console.log(tokens[i]);
                 break;
             }
             i++;
@@ -409,7 +418,7 @@ function parse(tokens) {
         if (hasInit) {
             i++;
 
-            parseListAny(init);
+            parseListExpression(init);
         }
     }
 
@@ -429,7 +438,19 @@ function parse(tokens) {
         i++;
     }
 
+    // Same as arguments except parseListExpression
+    function parseCallArguments(list) {
+        expectError(i, 'symbol', '(');
+        i++;
+        if (!expect(i, 'symbol', ')')) {
+            parseListExpression(list);
+            expectError(i, 'symbol', ')');
+        }
+        i++;
+    }
+
     // Call when i position is set to arg starting parenthesis
+    let noCall = false;
     function parseFunction() {
         let args = [];
         parseArguments(args);
@@ -445,12 +466,13 @@ function parse(tokens) {
     }
 
     let noExpression = false;
-    function parseExpression() {
+    // Usually, don't pass in anything, just call it with no args, but when you are evaluating an expression that started with an opening parenthesis, pass in nested so that it can break out when it sees closing parenthesis
+    function parseExpression(nested) {
         let current = null;
 
         if (expect(i, 'symbol', '(')) {
             i++;
-            current = parseExpression();
+            current = parseExpression(true);
         } else {
             noExpression = true;
             current = parseToken(tokens[i]);
@@ -458,7 +480,7 @@ function parse(tokens) {
         }
 
         while (i < tokens.length) {
-            if (expect(i, 'symbol', ')')) {
+            if (nested && expect(i, 'symbol', ')')) {
                 i++;
                 break;
             }
@@ -525,9 +547,9 @@ function parse(tokens) {
         switch (token.type) {
             case 'identifier': {
                 i++;
-                if (expect(i, 'symbol', '(')) {
+                if (!noCall && expect(i, 'symbol', '(')) {
                     let out = ast.callStatement(ast.identifier(token.value), []);
-                    parseArguments(out.args);
+                    parseCallArguments(out.arguments);
                     return out;
                 } else if (!noAssignment && expect(i, 'operator', '=')) {
                     i--;
@@ -549,7 +571,10 @@ function parse(tokens) {
                         i++;
                         if (expect(i, 'keyword', 'function')) {
                             i++; // Skip function keyword
+
+                            noCall = true;
                             let name = parseToken(tokens[i]);
+                            noCall = false;
 
                             let f = parseFunction();
                             
@@ -567,7 +592,10 @@ function parse(tokens) {
                         i++;
                         if (expect(i, 'keyword', 'function')) {
                             i++; // Skip function keyword
+
+                            noCall = true;
                             let name = parseToken(tokens[i]);
+                            noCall = false;
 
                             let f = parseFunction();
                             
@@ -583,7 +611,10 @@ function parse(tokens) {
                     }
                     case 'function': {
                         i++; // Skip function keyword
+
+                        noCall = true;
                         let name = parseToken(tokens[i]);
+                        noCall = false;
 
                         let f = parseFunction();
                         
@@ -593,7 +624,7 @@ function parse(tokens) {
                     case 'return': {
                         i++;
                         let list = [];
-                        parseListAny(list);
+                        parseListExpression(list);
 
                         return ast.returnStatement(list);
                         break;
