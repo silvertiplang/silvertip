@@ -7,6 +7,7 @@
     - decide on recursive (remove non-recursive stuff)
     - inconsitency: parseList vs parseToken
     - preserve whitespace (attach to token (beforeWhitespaceOrComments)?)
+    - parse expressions and operator prescedence
 */
 
 
@@ -278,7 +279,23 @@ let ast = {
 
 
 
-
+let operators = {
+    '+': true,
+    '-': true,
+    '*': true,
+    '/': true,
+    '%': true,
+    '^': true,
+    '==': true,
+    '!=': true,
+    '<': true,
+    '<=': true,
+    '>': true,
+    '>=': true,
+    '&&': true,
+    '||': true,
+    '!': true,
+};
 
 
 
@@ -383,6 +400,7 @@ function parse(tokens) {
 
     // Parse assignment
     // var, ... = init, ...
+    let noAssignment = false;
     function parseAssignment(variables, init) {
         parseList(variables, 'identifier');
 
@@ -421,9 +439,71 @@ function parse(tokens) {
         return out;
     }
 
+    let noExpression = false;
     function parseExpression() {
+        let current = null;
+
+        if (expect(i, 'symbol', '(')) {
+            i++;
+            current = parseExpression();
+        } else {
+            noExpression = true;
+            current = parseToken(tokens[i]);
+            noExpression = false;
+        }
+
+        while (i < tokens.length) {
+            if (expect(i, 'symbol', ')')) {
+                i++;
+                break;
+            }
+
+            let token = tokens[i];
+            let operator = token.value;
+            if (operators[operator]) {
+                i++;
+                noExpression = true;
+                rhs = parseToken(tokens[i]);
+                noExpression = false;
+                current = ast.binaryExpression(operator, current, rhs);
+            } else {
+                break;
+            }
+        }
         
+        return current;
     }
+
+    // OLD, NON-RECURSIVE ATTEMPT
+    // function parseExpression() {
+    //     let level = 0;
+    //     let current = null;
+    //     while (true) {
+    //         while (expect(i, 'symbol', '(')) {
+    //             level++;
+    //             i++;
+    //         }
+
+    //         let token = tokens[i];
+    //         noExpression = true;
+    //         let parsedToken = parseToken(token);
+    //         noExpression = false;
+
+    //         while (expect(i, 'symbol', ')')) {
+    //             level--;
+    //             if (level < 0) {
+    //                 break;
+    //             }
+    //             i++;
+    //         }
+
+    //         if (operators[tokens[i].value]) {
+                
+    //         }
+    //     }
+
+    //     return current;
+    // }
 
     // DEBUG
     let lastToken = null;
@@ -440,7 +520,22 @@ function parse(tokens) {
         switch (token.type) {
             case 'identifier': {
                 i++;
-                return ast.identifier(token.value);
+                if (expect(i, 'symbol', '(')) {
+                    let out = ast.callStatement(ast.identifier(token.value), []);
+                    parseListAny(out.args);
+                    return out;
+                } else if (!noAssignment && expect(i, 'operator', '=')) {
+                    i--;
+                    let variables = [];
+                    let init = [];
+                    noAssignment = true;
+                    parseAssignment(variables, init);
+                    noAssignment = false;
+                    
+                    return ast.assignmentStatement(variables, init);
+                } else {
+                    return ast.identifier(token.value);
+                }
                 break;
             }
             case 'keyword': {
@@ -569,9 +664,7 @@ function parse(tokens) {
                         if (expect(i, 'keyword', 'else')) {
                             i++;
 
-                            let condition = parseCondition();
-
-                            node = ast.elseClause(condition, []);
+                            node = ast.elseClause([]);
                             out.clauses.push(node);
                             parseBlock();
                         }
@@ -603,18 +696,30 @@ function parse(tokens) {
                         break;
                     }
                     case 'true': {
-                        i++;
-                        return ast.literal('BooleanLiteral', true);
+                        if (noExpression) {
+                            i++;
+                            return ast.literal('BooleanLiteral', true);
+                        } else {
+                            return parseExpression();
+                        }
                         break;
                     }
                     case 'false': {
-                        i++;
-                        return ast.literal('BooleanLiteral', false);
+                        if (noExpression) {
+                            i++;
+                            return ast.literal('BooleanLiteral', false);
+                        } else {
+                            return parseExpression();
+                        }
                         break;
                     }
                     case 'null': {
-                        i++;
-                        return ast.literal('NullLiteral', null);
+                        if (noExpression) {
+                            i++;
+                            return ast.literal('NullLiteral', null);
+                        } else {
+                            return parseExpression();
+                        }
                         break;
                     }
                     default: {
@@ -624,11 +729,16 @@ function parse(tokens) {
                 break;
             }
             case 'symbol': {
-
+                error(`Unexpected symbol '${token.value}'`);
                 break;
             }
             case 'operator': {
-
+                if (token.value == '-') {
+                    i++;
+                    return ast.unaryExpression('-', parseExpression());
+                } else {
+                    error(`Unexpected operator '${token.value}'`);
+                }
                 break;
             }
             case 'comment': {
@@ -637,8 +747,12 @@ function parse(tokens) {
                 break;
             }
             case 'string': {
-                i++;
-                return ast.literal('StringLiteral', token.value);
+                if (noExpression) {
+                    i++;
+                    return ast.literal('StringLiteral', token.value);
+                } else {
+                    return parseExpression();
+                }
                 break;
             }
             case 'whitespace': {
@@ -647,8 +761,12 @@ function parse(tokens) {
                 break;
             }
             case 'number': {
-                i++;
-                return ast.literal('NumericLiteral', parseFloat(token.value));
+                if (noExpression) {
+                    i++;
+                    return ast.literal('NumericLiteral', parseFloat(token.value));
+                } else {
+                    return parseExpression();
+                }
                 break;
             }
             default: {
