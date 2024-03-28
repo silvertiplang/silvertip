@@ -418,16 +418,21 @@ function parse(tokens) {
         return condition;
     }
 
-    // Call when i position is set to arg starting parenthesis
-    function parseFunction() {
+    // Internally used for parsing args for functions and lambdas and function calls
+    function parseArguments(list) {
         expectError(i, 'symbol', '(');
         i++;
-        let args = [];
         if (!expect(i, 'symbol', ')')) {
-            parseList(args, 'identifier');
+            parseList(list, 'identifier');
             expectError(i, 'symbol', ')');
         }
         i++;
+    }
+
+    // Call when i position is set to arg starting parenthesis
+    function parseFunction() {
+        let args = [];
+        parseArguments(args);
 
         let out = ast.lambdaExpression(args, []);
 
@@ -522,7 +527,7 @@ function parse(tokens) {
                 i++;
                 if (expect(i, 'symbol', '(')) {
                     let out = ast.callStatement(ast.identifier(token.value), []);
-                    parseListAny(out.args);
+                    parseArguments(out.args);
                     return out;
                 } else if (!noAssignment && expect(i, 'operator', '=')) {
                     i--;
