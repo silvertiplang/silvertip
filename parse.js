@@ -538,14 +538,44 @@ function parse(tokens) {
                     parseCallArguments(out.arguments);
                     return out;
                 } else if (!noAssignment && expect(expectAfterListI, 'operator', '=')) {
-                    i--;
-                    let variables = [];
-                    let init = [];
-                    noAssignment = true;
-                    parseAssignment(variables, init);
-                    noAssignment = false;
+                    let oldI = i;
+                    i = expectAfterListI + 1;
+                    let forStart = parseExpression();
+                    let isFor = expect(i, 'operator', '->');
+
+                    if (isFor) {
+                        i++;
+                        let forEnd = parseExpression();
+
+                        let oldI2 = i;
+                        i = oldI - 1;
+                        noAssignment = true;
+                        let forVariable = parseToken(tokens[i]);
+                        noAssignment = false;
+                        i = oldI2;
+
+                        // TODO
+                        let forStep = ast.literal('NumericLiteral', 1);
+
+                        let out = ast.forNumericStatement(forVariable, forStart, forEnd, forStep, []);
+
+                        let oldNode = node;
+                        node = out;
+                        parseBlock();
+                        node = oldNode;
+
+                        return out;
+                    } else {
+                        i = oldI;
+                        i--;
+                        let variables = [];
+                        let init = [];
+                        noAssignment = true;
+                        parseAssignment(variables, init);
+                        noAssignment = false;
+                        return ast.assignmentStatement(variables, init);
+                    }
                     
-                    return ast.assignmentStatement(variables, init);
                 } else if (!noAssignment && expect(expectAfterListI, 'operator') && text.operationAssignment[tokens[expectAfterListI].value]) {
                     let operation = tokens[expectAfterListI].value.substring(0, 1);
                     i--;

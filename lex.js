@@ -31,7 +31,11 @@ const text = {
     '+=', '-=', '*=', '/=', '%=', '^=', '&=', '|=',
 
     // not operators but punctuator
-    '=', '->', '<-']),
+    '=', '->',
+
+    // reverse arrows won't be implemented until valid reason
+    // '<-'
+    ]),
     comment: {
         start: '/*',
         shortStart: '//',
