@@ -8,12 +8,13 @@
     - inconsitency: parseList vs parseToken
     - preserve whitespace (attach to token (beforeWhitespaceOrComments)?)
     - parse expressions and operator prescedence
+    - add eof token and attach before whitespace and comments
 */
 
 
 
 
-const { error } = require("./utils");
+const { error, makeMap } = require("./utils");
 const { printToken } = require("./utils_debug");
 
 
@@ -107,9 +108,10 @@ let ast = {
         };
     },
 
-    operationAssignment: function(variables, init) { // ATODO
+    operationAssignment: function(operation, variables, init) { // ATODO
         return {
             type: 'OperationAssignment',
+            operation: operation,
             variables: variables,
             init: init
         };
@@ -278,25 +280,10 @@ let ast = {
 
 
 
-
-let operators = {
-    '+': true,
-    '-': true,
-    '*': true,
-    '/': true,
-    '%': true,
-    '^': true,
-    '==': true,
-    '!=': true,
-    '<': true,
-    '<=': true,
-    '>': true,
-    '>=': true,
-    '&&': true,
-    '||': true,
-    '!': true,
-};
-
+const text = {
+    operator: makeMap(['+', '-', '*', '/', '%', '^', '==', '!=', '<', '<=', '>', '>=', '&&', '||', '!']),
+    operationAssignment: makeMap(['+=', '-=', '*=', '/=', '%=', '^=', '&=', '|=']),
+}
 
 
 
@@ -421,6 +408,12 @@ function parse(tokens) {
             parseListExpression(init);
         }
     }
+    function parseOperationAssignment(variables, init) {
+        // DOES NO CHECKING, USED IN OperationAssignment INTERNALLY
+        parseList(variables, 'identifier');
+        i++;
+        parseListExpression(init);
+    }
 
     function parseCondition() {
         let condition = parseToken(tokens[i]);
@@ -486,8 +479,11 @@ function parse(tokens) {
             }
 
             let token = tokens[i];
+            if (!token) {
+                break;
+            }
             let operator = token.value;
-            if (operators[operator]) {
+            if (text.operator[operator]) {
                 i++;
                 noExpression = true;
                 rhs = parseToken(tokens[i]);
@@ -501,36 +497,6 @@ function parse(tokens) {
         return current;
     }
 
-    // OLD, NON-RECURSIVE ATTEMPT
-    // function parseExpression() {
-    //     let level = 0;
-    //     let current = null;
-    //     while (true) {
-    //         while (expect(i, 'symbol', '(')) {
-    //             level++;
-    //             i++;
-    //         }
-
-    //         let token = tokens[i];
-    //         noExpression = true;
-    //         let parsedToken = parseToken(token);
-    //         noExpression = false;
-
-    //         while (expect(i, 'symbol', ')')) {
-    //             level--;
-    //             if (level < 0) {
-    //                 break;
-    //             }
-    //             i++;
-    //         }
-
-    //         if (operators[tokens[i].value]) {
-                
-    //         }
-    //     }
-
-    //     return current;
-    // }
 
     // DEBUG
     let lastToken = null;
@@ -560,6 +526,16 @@ function parse(tokens) {
                     noAssignment = false;
                     
                     return ast.assignmentStatement(variables, init);
+                } else if (!noAssignment && expect(i, 'operator') && text.operationAssignment[tokens[i].value]) {
+                    let operation = tokens[i].value.substring(0, 1);
+                    i--;
+                    let variables = [];
+                    let init = [];
+                    noAssignment = true;
+                    parseOperationAssignment(variables, init);
+                    noAssignment = false;
+                    
+                    return ast.operationAssignment(operation, variables, init);
                 } else {
                     return ast.identifier(token.value);
                 }

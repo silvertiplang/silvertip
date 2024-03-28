@@ -1,3 +1,6 @@
+// 
+// break
+
 // local a
 // local a = 1
 // local a, b, c = 1, 2, 3
@@ -17,7 +20,6 @@
 // repeat {}
 // repeat {} until 1
 
-// break
 
 // continue
 
@@ -47,8 +49,11 @@
 // a = 1 + 2 + 3
 
 // a()
-a(1, 2, 3)
+// a(1, 2, 3)
 
-a = -1
+// a = -1
 
-a = 'a' + 'b'
+// a = 'a' + 'b'
+
+a += 1
+

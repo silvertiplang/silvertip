@@ -7,23 +7,10 @@
 
 
 
-const { error } = require("./utils");
+const { error, makeMap } = require("./utils");
 
 
 
-
-/*
-makeMap: Make a map from the values of an array
-array: array of values
-return: map where you can index it with the value and it will return true
-*/
-function makeMap(array) {
-    let map = {};
-    for (let i = 0; i < array.length; i++) {
-        map[array[i]] = true;
-    }
-    return map;
-}
 
 // text maps of each token
 const text = {
@@ -33,12 +20,16 @@ const text = {
     shortString: makeMap(['\'', '"']),
     shortStringEscape: makeMap(['\\']),
     longString: makeMap(['`']),
-    whitespace: makeMap([' ', '\t', '\n', '\r']),
+    whitespace: makeMap([' ', '\t', '\n', '\r', ';']),
     number1: makeMap(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']),
     number2: makeMap(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', 'e']),
 
     
     operator: makeMap(['+', '-', '*', '/', '%', '^', '==', '!=', '<', '<=', '>', '>=', '&&', '||', '!',
+
+    // not operators but operationassignment
+    '+=', '-=', '*=', '/=', '%=', '^=', '&=', '|=',
+
     // not operators but punctuator
     '=', '->', '<-']),
     comment: {
