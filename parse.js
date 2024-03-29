@@ -203,14 +203,7 @@ let ast = {
         };
     },
 
-    arrayEntry: function(value) { // ATODO
-        return {
-            type: 'ArrayEntry',
-            value: value
-        };
-    },
-
-    tableEntry: function(key, value) { // ATODO
+    tableEntry: function(key, value) {
         return {
             type: 'TableEntry',
             key: key,
@@ -218,13 +211,13 @@ let ast = {
         };
     },
     
-    arrayConstructorExpression: function(fields) { // ATODO
+    arrayConstructorExpression: function(list) {
         return {
             type: 'ArrayConstructorExpression',
-            fields: fields
+            list: list
         };
     },
-    tableConstructorExpression: function(fields) { // ATODO
+    tableConstructorExpression: function(fields) {
         return {
             type: 'TableConstructorExpression',
             fields: fields
@@ -247,7 +240,7 @@ let ast = {
             argument: argument
         };
     },
-    indexExpression: function(base, index) { // ATODO
+    indexExpression: function(base, index) {
         return {
             type: 'IndexExpression',
             base: base,
@@ -1054,7 +1047,55 @@ function parse(tokens) {
                 break;
             }
             case 'symbol': {
-                error(`Unexpected symbol '${token.value}'`);
+                if (token.value == '[') {
+                    if (noExpression) {
+                        i++;
+                        let list = [];
+                        if (!expect(i, 'symbol', ']')) {
+                            parseListExpression(list);
+                            expectError(i, 'symbol', ']');
+                        }
+                        i++;
+                        return ast.arrayConstructorExpression(list);
+                    } else {
+                        return parseExpressionOrPipe();
+                    }
+                } else if (token.value == '{') {
+                    if (noExpression) {
+                        i++;
+                        let list = [];
+                        if (!expect(i, 'symbol', '}')) {
+                            while (true) {
+                                let key;
+                                if (expect(i, 'symbol', '[')) {
+                                    i++;
+                                    key = parseExpression();
+                                    expectError(i, 'symbol', ']');
+                                } else {
+                                    expectError(i, 'identifier');
+                                    key = ast.identifier(tokens[i].value);
+                                }
+                                i++;
+                                expectError(i, 'symbol', ':');
+                                i++;
+                                let value = parseExpression();
+                                list.push(ast.tableEntry(key, value));
+                                if (expect(i, 'symbol', ',')) {
+                                    i++;
+                                } else {
+                                    expectError(i, 'symbol', '}');
+                                    break;
+                                }
+                            }
+                        }
+                        i++;
+                        return ast.tableConstructorExpression(list);
+                    } else {
+                        return parseExpressionOrPipe();
+                    }
+                } else {
+                    error(`Unexpected symbol '${token.value}'`);
+                }
                 break;
             }
             case 'operator': {
