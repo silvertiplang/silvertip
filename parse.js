@@ -254,7 +254,7 @@ let ast = {
             index: index
         };
     },
-    lambdaExpression: function(parameters, body) { // ATODO
+    lambdaExpression: function(parameters, body) {
         return {
             type: 'LambdaExpression',
             parameters: parameters,
@@ -714,6 +714,33 @@ function parse(tokens) {
                     let out = ast.callStatement(ast.identifier(token.value), []);
                     parseCallArguments(out.arguments);
                     return out;
+                } else if (expect(i, 'symbol', '.')) {
+                    let current = ast.identifier(token.value);
+                    while (true) {
+                        if (expect(i, 'symbol', '.') && expect(i + 1, 'identifier')) {
+                            i++;
+                            let rhs = tokens[i];
+                            current = ast.indexExpression(current, ast.identifier(rhs.value));
+                            i++;
+                        } else {
+                            break;
+                        }
+                    }
+                    return current;
+                } else if (expect(i, 'symbol', '[')) {
+                    let current = ast.identifier(token.value);
+                    while (true) {
+                        if (expect(i, 'symbol', '[')) {
+                            i++;
+                            let rhs = parseExpression();
+                            expectError(i, 'symbol', ']');
+                            current = ast.indexExpression(current, rhs);
+                            i++;
+                        } else {
+                            break;
+                        }
+                    }
+                    return current;
                 } else if (!noArrow && expect(i, 'operator', '->')) {
                     let oldI = i;
 
