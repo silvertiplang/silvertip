@@ -152,7 +152,7 @@ let ast = {
     //     };
     // },
 
-    forNumericStatement: function(variable, start, end, step, body) { // ATODO
+    forNumericStatement: function(variable, start, end, step, body) {
         return {
             type: 'ForNumericStatement',
             variable: variable,
@@ -163,11 +163,12 @@ let ast = {
         };
     },
 
-    forGenericStatement: function(variables, iterators, body) { // ATODO
+    forGenericStatement: function(objectVariable, valueVariable, keyVariable, body) {
         return {
             type: 'ForGenericStatement',
-            variables: variables,
-            iterators: iterators,
+            objectVariable: objectVariable,
+            valueVariable: valueVariable,
+            keyVariable: keyVariable,
             body: body
         };
     },
@@ -458,14 +459,76 @@ function parse(tokens) {
         return out;
     }
 
+    let noArrow = false;
+    function parseLambda() {
+        let hasParenthesis = expect(i, 'symbol', '(');
+        let list = [];
+        noArrow = true;
+        if (hasParenthesis) {
+            i++;
+            if (!expect(i, 'symbol', ')')) {
+                parseList(list, 'identifier');
+                expectError(i, 'symbol', ')');
+            }
+            i++;
+        } else {
+            parseList(list, 'identifier');
+        }
+        noArrow = false;
+
+        expectError(i, 'operator', '->');
+        i++;
+
+        let out = ast.lambdaExpression(list, []);
+
+        if (expect(i, 'symbol', '{')) {
+            let oldNode = node;
+            node = out;
+            parseBlock();
+            node = oldNode;
+        } else {
+            out.body.push(ast.returnStatement(parseExpression()));
+        }
+
+        return out;
+    }
+
     let noExpression = false;
     // Usually, don't pass in anything, just call it with no args, but when you are evaluating an expression that started with an opening parenthesis, pass in nested so that it can break out when it sees closing parenthesis
     function parseExpression(nested) {
         let current = null;
 
         if (expect(i, 'symbol', '(')) {
+            let oldI = i;
             i++;
-            current = parseExpression(true);
+
+            let isLambda = true;
+
+
+            let list = [];
+            if (!expect(i, 'symbol', ')')) {
+                parseList(list, 'identifier');
+                if (!expect(i, 'symbol', ')')) {
+                    isLambda = false;
+                }
+            }
+            i++;
+            if (!expect(i, 'operator', '->')) {
+                isLambda = false;
+            }
+            // i++;
+            // if (!expect(i, 'symbol', '{')) {
+            //     isLambda = false;
+            // }
+
+            if (isLambda) {
+                i = oldI;
+                current = parseLambda();
+            } else {
+                i = oldI;
+                i++;
+                current = parseExpression(true);
+            }
         } else {
             noExpression = true;
             current = parseToken(tokens[i]);
@@ -497,18 +560,33 @@ function parse(tokens) {
         return current;
     }
 
-    let noList = false
+    // let noList = false
     function getAfterList(listType) {
-        if (noList) {
-            return -1;
-        }
+        // if (noList) {
+        //     return -1;
+        // }
 
         let oldI = i;
-        let list = [];
+        // let list = [];
 
-        noList = true;
-        parseList(list, listType);
-        noList = false;
+        // noList = true;
+        // parseList(list, listType);
+        // Custom list parsing function
+        while (i < tokens.length) {
+            let t = tokens[i];
+            if (t.type == listType) {
+                // list.push(parseToken(t));
+                i++;
+                if (!expect(i, 'symbol', ',')) {
+                    break;
+                }
+                i++;
+            } else {
+                i++;
+                break;
+            }
+        }
+        // noList = false;
 
 
         let i2 = i;
@@ -518,25 +596,80 @@ function parse(tokens) {
 
 
     // DEBUG
-    let lastToken = null;
+    // let lastToken = null;
 
     function parseToken(token) {
         // DEBUG
-        if (!lastToken || token.type != lastToken.type && token.value != lastToken.value) {
+        // if (!lastToken || token.type != lastToken.type && token.value != lastToken.value) {
             printToken(token);
             lastToken = token;
-        }
+        // }
 
 
 
         switch (token.type) {
             case 'identifier': {
                 let expectAfterListI = getAfterList('identifier');
+                console.log(tokens[expectAfterListI]);
                 i++;
                 if (!noCall && expect(i, 'symbol', '(')) {
                     let out = ast.callStatement(ast.identifier(token.value), []);
                     parseCallArguments(out.arguments);
                     return out;
+                } else if (!noArrow && expect(i, 'operator', '->')) {
+                    let oldI = i;
+
+                    // forgeneric or lambda or (pipe but irrelevant)
+                    // (pipe will be absorbed before it reaches here, and it will be skipped in here)
+                    i++;
+                    if (expect(i, 'identifier')) {
+                        let oldI2 = i;
+                        i = oldI - 1;
+                        noArrow = true;
+                        let objectVariable = parseToken(tokens[i]);
+                        noArrow = false;
+                        i = oldI2;
+
+                        let v = [];
+                        parseList(v, 'identifier');
+                        let valueVariable, keyVariable;
+                        if (v.length == 1) {
+                            valueVariable = v[0];
+                            keyVariable = null;
+                        } else {
+                            valueVariable = v[0];
+                            keyVariable = v[1];
+                        }
+
+                        let out = ast.forGenericStatement(objectVariable, valueVariable, keyVariable, []);
+
+                        let oldNode = node;
+                        node = out;
+                        parseBlock();
+                        node = oldNode;
+
+                        return out;
+                    } else if (expect(i, 'symbol', '{')) {
+                        i = i - 2;
+                        return parseLambda();
+                    } else {
+                        // Pipe
+
+                        // disregard, it will be processed later (since anything can be piped in)
+
+                        // error(`Invalid token '${token.value}' after '->'`);
+                    }
+                } else if (!noArrow && expect(expectAfterListI, 'operator', '->')) {
+                    // lambda or pipe
+                    if (expect(expectAfterListI + 1, 'symbol', '{')) {
+                        i--;
+                        return parseLambda();
+                    } else {
+                        // Pipe
+
+                        // disregard, it will be processed later (since anything can be piped in)
+
+                    }
                 } else if (!noAssignment && expect(expectAfterListI, 'operator', '=')) {
                     let oldI = i;
                     i = expectAfterListI + 1;
@@ -547,6 +680,7 @@ function parse(tokens) {
                         i++;
                         let forEnd = parseExpression();
 
+                        // DIRTY, OPTIMIZE
                         let oldI2 = i;
                         i = oldI - 1;
                         noAssignment = true;
@@ -608,7 +742,9 @@ function parse(tokens) {
                         } else {
                             let variables = [];
                             let init = [];
+                            noAssignment = true;
                             parseAssignment(variables, init);
+                            noAssignment = false;
                             
                             return ast.localStatement(variables, init);
                         }
@@ -629,7 +765,9 @@ function parse(tokens) {
                         } else {
                             let variables = [];
                             let init = [];
+                            noAssignment = true;
                             parseAssignment(variables, init);
+                            noAssignment = false;
                             
                             return ast.localStatement(variables, init);
                         }
@@ -798,6 +936,8 @@ function parse(tokens) {
                 if (token.value == '-') {
                     i++;
                     return ast.unaryExpression('-', parseExpression());
+                } else if (token.value == '->') {
+                    // TODO
                 } else {
                     error(`Unexpected operator '${token.value}'`);
                 }
