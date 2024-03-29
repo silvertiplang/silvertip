@@ -89,19 +89,25 @@
 
 // // indexExpression
 
-// lambdaExpression
+// // lambdaExpression
 // local a = () -> {}
 // local a = (a, b, c) -> {return 1}
 // local a = (a, b, c) -> a + b + c
 // local a = a -> {}
 // local a = a, b, c -> {}
 
-// comment
+// // comment
 
-// whitespace
-
-
+// // whitespace
 
 
-// Pipe testing
-// a -> b
+
+
+// // Pipe testing
+// 1 -> a
+// 1, 2 -> b
+// 1, 2 -> a -> b -> c
+// 'a' -> a
+// 1 + 2 -> a
+// 1 -> a -> local a, b
+// 1, 2 -> local a, b

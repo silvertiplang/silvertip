@@ -385,7 +385,10 @@ function parse(tokens) {
     //         i++;
     //     }
     // }
+
+    let noListExpression = false;
     function parseListExpression(list) {
+        noListExpression = true;
         while (i < tokens.length) {
             list.push(parseExpression());
             if (!expect(i, 'symbol', ',')) {
@@ -393,6 +396,7 @@ function parse(tokens) {
             }
             i++;
         }
+        noListExpression = false;
     }
 
     // Parse assignment
@@ -560,17 +564,8 @@ function parse(tokens) {
         return current;
     }
 
-    // let noList = false
     function getAfterList(listType) {
-        // if (noList) {
-        //     return -1;
-        // }
-
         let oldI = i;
-        // let list = [];
-
-        // noList = true;
-        // parseList(list, listType);
         // Custom list parsing function
         while (i < tokens.length) {
             let t = tokens[i];
@@ -586,12 +581,116 @@ function parse(tokens) {
                 break;
             }
         }
-        // noList = false;
-
 
         let i2 = i;
         i = oldI;
         return i2;
+    }
+    function getAfterListExpression() {
+        let oldI = i;
+        // Custom list parsing function
+        while (i < tokens.length) {
+            parseExpression();
+            if (!expect(i, 'symbol', ',')) {
+                break;
+            }
+            i++;
+        }
+
+        let i2 = i;
+        i = oldI;
+        return i2;
+    }
+
+    let noPipe = false;
+    function parsePipe(first) {
+        noPipe = true;
+        noArrow = true;
+
+        // Initial expectation
+        expectError(i, 'operator', '->');
+
+        let current = first;
+        let initial = true;
+        let finalModifier = null;
+
+        while (true) {
+            // if (expect(i, 'operator', '->')) {
+                i++;
+
+                // final modifier
+                if (expect(i, 'keyword')) {
+                    finalModifier = tokens[i].value;
+                    i++;
+                }
+
+                let oldI = i;
+
+                let expr = parseExpression();
+
+                if (!initial) {
+                    current = [current];
+                    initial = false;
+                }
+
+                if (expect(i, 'operator', '->')) {
+                    // function (or something that is a function)
+                    current = ast.callStatement(expr, current);
+                } else {
+                    // reparse expression (since it is a list)
+                    let expr2 = [];
+                    i = oldI;
+                    parseList(expr2, 'identifier');
+
+                    // final variable
+                    if (finalModifier == null) {
+                        current = ast.assignmentStatement(expr2, current);
+                    } else if (finalModifier == 'local') {
+                        current = ast.localStatement(expr2, current);
+                    } else if (finalModifier == 'global') {
+                        current = ast.globalStatement(expr2, current);
+                    } else {
+                        error('Unknown final modifier');
+                    }
+                    break;
+                }
+
+                // if (expect(i, 'identifier') && expect(i + 1, 'operator', '->')) {
+                //     // function (optimize for this single case)
+                //     // maybe needs unpack ast to unpack current
+                //     current = ast.callStatement(ast.identifier(tokens[i].value), current);
+                // } else {
+                //     // expression
+                //     // let rhs = parseExpression();
+                //     // current = ast.lambdaExpression()
+                //     expectError('')
+                // }
+            // }
+        }
+
+        noPipe = false;
+        noArrow = false;
+
+        return current;
+    }
+
+    function parseExpressionOrPipe() {
+        if (noListExpression) {
+            return parseExpression();
+        } else {
+            let list = [];
+            parseListExpression(list);
+
+            if (!noPipe && expect(i, 'operator', '->')) {
+                // Pipe
+                return parsePipe(list);
+            } else {
+                if (list > 1) {
+                    error(`Unexpected symbol ','`);
+                }
+                return list[0];
+            }
+        }
     }
 
 
@@ -602,7 +701,7 @@ function parse(tokens) {
         // DEBUG
         // if (!lastToken || token.type != lastToken.type && token.value != lastToken.value) {
             printToken(token);
-            lastToken = token;
+            // lastToken = token;
         // }
 
 
@@ -610,7 +709,6 @@ function parse(tokens) {
         switch (token.type) {
             case 'identifier': {
                 let expectAfterListI = getAfterList('identifier');
-                console.log(tokens[expectAfterListI]);
                 i++;
                 if (!noCall && expect(i, 'symbol', '(')) {
                     let out = ast.callStatement(ast.identifier(token.value), []);
@@ -622,7 +720,7 @@ function parse(tokens) {
                     // forgeneric or lambda or (pipe but irrelevant)
                     // (pipe will be absorbed before it reaches here, and it will be skipped in here)
                     i++;
-                    if (expect(i, 'identifier')) {
+                    if (expect(i, 'identifier') && expect(getAfterList('identifier'), 'symbol', '{')) {
                         let oldI2 = i;
                         i = oldI - 1;
                         noArrow = true;
@@ -900,7 +998,7 @@ function parse(tokens) {
                             i++;
                             return ast.literal('BooleanLiteral', true);
                         } else {
-                            return parseExpression();
+                            return parseExpressionOrPipe();
                         }
                         break;
                     }
@@ -909,7 +1007,7 @@ function parse(tokens) {
                             i++;
                             return ast.literal('BooleanLiteral', false);
                         } else {
-                            return parseExpression();
+                            return parseExpressionOrPipe();
                         }
                         break;
                     }
@@ -918,7 +1016,7 @@ function parse(tokens) {
                             i++;
                             return ast.literal('NullLiteral', null);
                         } else {
-                            return parseExpression();
+                            return parseExpressionOrPipe();
                         }
                         break;
                     }
@@ -936,8 +1034,10 @@ function parse(tokens) {
                 if (token.value == '-') {
                     i++;
                     return ast.unaryExpression('-', parseExpression());
-                } else if (token.value == '->') {
-                    // TODO
+                // } else if (token.value == '->') {
+                //     // TODO
+                //     // Forced to backtrack (NVM DONT BACKTRACK)
+                //     // let expectBeforeListI = getAfterList('identifier');
                 } else {
                     error(`Unexpected operator '${token.value}'`);
                 }
@@ -953,7 +1053,7 @@ function parse(tokens) {
                     i++;
                     return ast.literal('StringLiteral', token.value);
                 } else {
-                    return parseExpression();
+                    return parseExpressionOrPipe();
                 }
                 break;
             }
@@ -967,7 +1067,41 @@ function parse(tokens) {
                     i++;
                     return ast.literal('NumericLiteral', parseFloat(token.value));
                 } else {
-                    return parseExpression();
+                    return parseExpressionOrPipe();
+
+
+
+                    // v2
+
+                    // if (noListExpression) {
+                    //     return parseExpression();
+                    // } else {
+                    //     let list = [];
+                    //     parseListExpression(list);
+
+                    //     if (!noPipe && expect(i, 'operator', '->')) {
+                    //         // Pipe
+                    //         return parsePipe(list);
+                    //     } else {
+                    //         if (list > 1) {
+                    //             error(`Unexpected symbol ','`);
+                    //         }
+                    //         return list[0];
+                    //     }
+                    // }
+
+
+
+                    // v1
+
+                    // let out = parseExpression();
+
+                    // if (!noPipe && expect(i, 'operator', '->')) {
+                    //     // Pipe
+                    //     return parsePipe(out);
+                    // } else {
+                    //     return out;
+                    // }
                 }
                 break;
             }
