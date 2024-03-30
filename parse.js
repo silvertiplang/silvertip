@@ -441,119 +441,48 @@ function parse(tokens) {
     }
 
 
-    function parseAfterIdentifier(identifier, expectAfterListI) {
-        if (!noCall && expect(i, 'symbol', '(')) {
-            let out = ast.callStatement(identifier, []);
-            parseCallArguments(out.arguments);
-            return out;
-        } else if (!noArrow && expect(i, 'operator', '->')) {
-            let oldI = i;
 
-            // forgeneric or lambda or (pipe but irrelevant)
-            // (pipe will be absorbed before it reaches here, and it will be skipped in here)
-            i++;
-            if (expect(i, 'identifier') && expect(getAfterList('identifier'), 'symbol', '{')) {
-                let oldI2 = i;
-                i = oldI - 1;
-                noArrow = true;
-                let objectVariable = parseToken(tokens[i]);
-                noArrow = false;
-                i = oldI2;
-
-                let v = [];
-                parseList(v, 'identifier');
-                let valueVariable, keyVariable;
-                if (v.length == 1) {
-                    valueVariable = v[0];
-                    keyVariable = null;
-                } else {
-                    valueVariable = v[0];
-                    keyVariable = v[1];
-                }
-
-                let out = ast.forGenericStatement(objectVariable, valueVariable, keyVariable, []);
-
-                let oldNode = node;
-                node = out;
-                parseBlock();
-                node = oldNode;
-
-                return out;
-            } else if (expect(i, 'symbol', '{')) {
-                i = i - 2;
-                return parseLambda();
-            } else {
-                // Pipe
-
-                // disregard, it will be processed later (since anything can be piped in)
-
-                // error(`Invalid token '${token.value}' after '->'`);
-            }
-        } else if (!noArrow && expect(expectAfterListI, 'operator', '->')) {
-            // lambda or pipe
-            if (expect(expectAfterListI + 1, 'symbol', '{')) {
-                i--;
-                return parseLambda();
-            } else {
-                // Pipe
-
-                // disregard, it will be processed later (since anything can be piped in)
-
-            }
-        } else if (!noAssignment && expect(expectAfterListI, 'operator', '=')) {
-            let oldI = i;
-            i = expectAfterListI + 1;
-            let forStart = parseExpression();
-            let isFor = expect(i, 'operator', '->');
-
-            if (isFor) {
+    function parseExtendedIdentifier() {
+        // call when i is on the first identifier in the chain
+        let current = ast.identifier(tokens[i].value);
+        while (true) {
+            if (expect(i, 'symbol', '.') && expect(i + 1, 'identifier')) {
                 i++;
-                let forEnd = parseExpression();
-
-                // DIRTY, OPTIMIZE
-                let oldI2 = i;
-                i = oldI - 1;
-                noAssignment = true;
-                let forVariable = parseToken(tokens[i]);
-                noAssignment = false;
-                i = oldI2;
-
-                // TODO
-                let forStep = ast.numericLiteral(1);
-
-                let out = ast.forNumericStatement(forVariable, forStart, forEnd, forStep, []);
-
-                let oldNode = node;
-                node = out;
-                parseBlock();
-                node = oldNode;
-
-                return out;
+                let rhs = tokens[i];
+                current = ast.indexExpression(current, ast.stringLiteral(rhs.value));
+                i++;
+            } else if (expect(i, 'symbol', '[')) {
+                i++;
+                let rhs = parseExpression();
+                expectError(i, 'symbol', ']');
+                current = ast.indexExpression(current, rhs);
+                i++;
             } else {
-                i = oldI;
-                i--;
-                let variables = [];
-                let init = [];
-                noAssignment = true;
-                parseAssignment(variables, init);
-                noAssignment = false;
-                return ast.assignmentStatement(variables, init);
+                break;
             }
-            
-        } else if (!noAssignment && expect(expectAfterListI, 'operator') && text.operationAssignment[tokens[expectAfterListI].value]) {
-            let operation = tokens[expectAfterListI].value.substring(0, 1);
-            i--;
-            let variables = [];
-            let init = [];
-            noAssignment = true;
-            parseOperationAssignment(variables, init);
-            noAssignment = false;
-            
-            return ast.operationAssignment(operation, variables, init);
-        } else {
-            return identifier;
         }
+        return current;
     }
+
+    let noListExtendedIdentifier = false;
+    function parseListExtendedIdentifier(list) {
+        /*
+        terminology:
+        - identifier: variable name
+        - extended identifier: variable name + possible index (varname.a['a'].b)
+        */
+        noListExtendedIdentifier = true;
+        while (i < tokens.length) {
+            list.push(parseExtendedIdentifier());
+            if (!expect(i, 'symbol', ',')) {
+                break;
+            }
+            i++;
+        }
+        noListExtendedIdentifier = false;
+    }
+
+
 
 
     // DEBUG
@@ -562,7 +491,7 @@ function parse(tokens) {
     function parseToken(token) {
         // DEBUG
         // if (!lastToken || token.type != lastToken.type && token.value != lastToken.value) {
-            // printToken(token);
+            printToken(token);
             // lastToken = token;
         // }
 
@@ -573,31 +502,120 @@ function parse(tokens) {
                 let expectAfterListI = getAfterList('identifier');
                 i++;
 
-                let current = ast.identifier(token.value);
-                if (expect(i, 'symbol', '.') || expect(i, 'symbol', '[')) {
-                    while (true) {
-                        if (expect(i, 'symbol', '.') && expect(i + 1, 'identifier')) {
-                            i++;
-                            let rhs = tokens[i];
-                            current = ast.indexExpression(current, ast.stringLiteral(rhs.value));
-                            i++;
-                        } else if (expect(i, 'symbol', '[')) {
-                            i++;
-                            let rhs = parseExpression();
-                            expectError(i, 'symbol', ']');
-                            current = ast.indexExpression(current, rhs);
-                            i++;
-                        } else {
-                            break;
-                        }
-                    }
-        
-                    i--;
-                    expectAfterListI = getAfterList('identifier');
-                    i++;
-                }
+                let identifier = parseExtendedIdentifier();
                 
-                return parseAfterIdentifier(current, expectAfterListI);
+                
+                if (!noCall && expect(i, 'symbol', '(')) {
+                    let out = ast.callStatement(identifier, []);
+                    parseCallArguments(out.arguments);
+                    return out;
+                } else if (!noArrow && expect(i, 'operator', '->')) {
+                    let oldI = i;
+
+                    // forgeneric or lambda or (pipe but irrelevant)
+                    // (pipe will be absorbed before it reaches here, and it will be skipped in here)
+                    i++;
+                    if (expect(i, 'identifier') && expect(getAfterList('identifier'), 'symbol', '{')) {
+                        let oldI2 = i;
+                        i = oldI - 1;
+                        noArrow = true;
+                        let objectVariable = parseToken(tokens[i]);
+                        noArrow = false;
+                        i = oldI2;
+
+                        let v = [];
+                        parseList(v, 'identifier');
+                        let valueVariable, keyVariable;
+                        if (v.length == 1) {
+                            valueVariable = v[0];
+                            keyVariable = null;
+                        } else {
+                            valueVariable = v[0];
+                            keyVariable = v[1];
+                        }
+
+                        let out = ast.forGenericStatement(objectVariable, valueVariable, keyVariable, []);
+
+                        let oldNode = node;
+                        node = out;
+                        parseBlock();
+                        node = oldNode;
+
+                        return out;
+                    } else if (expect(i, 'symbol', '{')) {
+                        i = i - 2;
+                        return parseLambda();
+                    } else {
+                        // Pipe
+
+                        // disregard, it will be processed later (since anything can be piped in)
+
+                        // error(`Invalid token '${token.value}' after '->'`);
+                    }
+                } else if (!noArrow && expect(expectAfterListI, 'operator', '->')) {
+                    // lambda or pipe
+                    if (expect(expectAfterListI + 1, 'symbol', '{')) {
+                        i--;
+                        return parseLambda();
+                    } else {
+                        // Pipe
+
+                        // disregard, it will be processed later (since anything can be piped in)
+
+                    }
+                } else if (!noAssignment && expect(expectAfterListI, 'operator', '=')) {
+                    let oldI = i;
+                    i = expectAfterListI + 1;
+                    let forStart = parseExpression();
+                    let isFor = expect(i, 'operator', '->');
+
+                    if (isFor) {
+                        i++;
+                        let forEnd = parseExpression();
+
+                        // DIRTY, OPTIMIZE
+                        let oldI2 = i;
+                        i = oldI - 1;
+                        noAssignment = true;
+                        let forVariable = parseToken(tokens[i]);
+                        noAssignment = false;
+                        i = oldI2;
+
+                        // TODO
+                        let forStep = ast.numericLiteral(1);
+
+                        let out = ast.forNumericStatement(forVariable, forStart, forEnd, forStep, []);
+
+                        let oldNode = node;
+                        node = out;
+                        parseBlock();
+                        node = oldNode;
+
+                        return out;
+                    } else {
+                        i = oldI;
+                        i--;
+                        let variables = [];
+                        let init = [];
+                        noAssignment = true;
+                        parseAssignment(variables, init);
+                        noAssignment = false;
+                        return ast.assignmentStatement(variables, init);
+                    }
+                    
+                } else if (!noAssignment && expect(expectAfterListI, 'operator') && text.operationAssignment[tokens[expectAfterListI].value]) {
+                    let operation = tokens[expectAfterListI].value.substring(0, 1);
+                    i--;
+                    let variables = [];
+                    let init = [];
+                    noAssignment = true;
+                    parseOperationAssignment(variables, init);
+                    noAssignment = false;
+                    
+                    return ast.operationAssignment(operation, variables, init);
+                } else {
+                    return identifier;
+                }
                 break;
             }
             case 'keyword': {
