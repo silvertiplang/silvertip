@@ -504,7 +504,7 @@ function parse(tokens) {
     function parseToken(token) {
         // DEBUG
         // if (!lastToken || token.type != lastToken.type && token.value != lastToken.value) {
-            printToken(token);
+            // printToken(token);
             // lastToken = token;
         // }
 

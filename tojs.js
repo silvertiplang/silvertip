@@ -16,15 +16,15 @@ function tojs(ast) {
     function recurse(node) {
         switch (typeMap[node.type]) {
             case 'breakStatement': {
-                out += 'break;';
+                out += ';break;';
                 break;
             }
             case 'continueStatement': {
-                out += 'continue;';
+                out += ';continue;';
                 break;
             }
             case 'returnStatement': {
-                out += 'return ';
+                out += ';return ';
                 recurseList(node.arguments, true);
                 out += ';';
                 break;
@@ -34,7 +34,7 @@ function tojs(ast) {
                 break;
             }
             case 'ifClause': {
-                out += 'if(';
+                out += ';if(';
                 recurse(node.condition);
                 out += '){';
                 recurseList(node.body);
@@ -56,7 +56,7 @@ function tojs(ast) {
                 break;
             }
             case 'whileStatement': {
-                out += 'while(';
+                out += ';while(';
                 recurse(node.condition);
                 out += '){'
                 recurseList(node.body);
@@ -64,7 +64,7 @@ function tojs(ast) {
                 break;
             }
             case 'repeatStatement': {
-                out += 'do{'
+                out += ';do{'
                 recurseList(node.body);
                 out += '}while(!';
                 recurse(node.condition);
@@ -72,7 +72,7 @@ function tojs(ast) {
                 break;
             }
             case 'localStatement': {
-                out += 'let '
+                out += ';let '
                 for (let i = 0; i < node.variables.length; i++) {
                     let variable = node.variables[i];
                     let init = node.init[i];
@@ -91,10 +91,27 @@ function tojs(ast) {
                 break;
             }
             case 'globalStatement': {
-
+                out += ';'
+                for (let i = 0; i < node.variables.length; i++) {
+                    let variable = node.variables[i];
+                    let init = node.init[i];
+                    if (init) {
+                        out += '_G.';
+                        recurse(variable);
+                        out += '=';
+                        recurse(init);
+                    } else {
+                        recurse(variable);
+                    }
+                    if (i != node.variables.length - 1) {
+                        out += ',';
+                    }
+                }
+                out += ';';
                 break;
             }
             case 'assignmentStatement': {
+                out += ';';
                 let length = node.variables.length < node.init.length ? node.variables.length : node.init.length;
                 for (let i = 0; i < length; i++) {
                     let variable = node.variables[i];
@@ -108,7 +125,8 @@ function tojs(ast) {
             }
             case 'operationAssignment': {
                 // TODO: Optimize
-
+                
+                out += ';';
                 let length = node.variables.length < node.init.length ? node.variables.length : node.init.length;
                 for (let i = 0; i < length; i++) {
                     let variable = node.variables[i];
@@ -130,7 +148,7 @@ function tojs(ast) {
                 break;
             }
             case 'forNumericStatement': {
-                out += 'for(let ';
+                out += ';for(let ';
                 recurse(node.variable);
                 out += '=';
                 recurse(node.start);
@@ -148,7 +166,7 @@ function tojs(ast) {
                 break;
             }
             case 'forGenericStatement': {
-                out += 'for(const[';
+                out += ';for(const[';
                 if (node.keyVariable) {
                     recurse(node.keyVariable);
                 }
@@ -166,9 +184,9 @@ function tojs(ast) {
                 break;
             }
             case 'asyncStatement': {
-                out += '(async()=>{';
+                out += ';(async()=>{';
                 recurseList(node.body);
-                out += '})()';
+                out += '})();';
                 break;
             }
             case 'identifier': {
@@ -277,6 +295,7 @@ function tojs(ast) {
         }
     }
 
+    out += '_G={};'
     recurse(ast);
 
     return out;
