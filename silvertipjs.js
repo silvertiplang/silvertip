@@ -1,5 +1,5 @@
 /*
-    arrowtipjs
+    silvertipjs
 
     converts arrowtip to js and then runs it
 */
