@@ -662,7 +662,7 @@ function parse(tokens) {
 
                             let f = parseFunction();
                             
-                            return ast.localStatement([name], [f]);
+                            return ast.globalStatement([name], [f]);
                         } else {
                             let variables = [];
                             let init = [];
@@ -670,7 +670,7 @@ function parse(tokens) {
                             parseAssignment(variables, init);
                             noAssignment = false;
                             
-                            return ast.localStatement(variables, init);
+                            return ast.globalStatement(variables, init);
                         }
                         break;
                     }

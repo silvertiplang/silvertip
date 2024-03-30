@@ -13,6 +13,7 @@ let typeMap = generateASTDecode(ast);
 function tojs(ast) {
     // traverse ast and output
     let out = '';
+    let globals = {};
     function recurse(node) {
         switch (typeMap[node.type]) {
             case 'breakStatement': {
@@ -95,8 +96,8 @@ function tojs(ast) {
                 for (let i = 0; i < node.variables.length; i++) {
                     let variable = node.variables[i];
                     let init = node.init[i];
+                    globals[variable.name] = true; // DIRTY
                     if (init) {
-                        out += '_G.';
                         recurse(variable);
                         out += '=';
                         recurse(init);
@@ -161,7 +162,7 @@ function tojs(ast) {
                 out += '+=';
                 recurse(node.step);
                 out += '){';
-                recurseList(node.arguments);
+                recurseList(node.body);
                 out += '}';
                 break;
             }
@@ -190,6 +191,9 @@ function tojs(ast) {
                 break;
             }
             case 'identifier': {
+                if (globals[node.name]) {
+                    out += '_G.';
+                }
                 out += node.name;
                 break;
             }
