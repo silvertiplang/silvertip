@@ -14,11 +14,32 @@ function makeMap(array) {
 
 /*
 error: Cleanly throws an error in the desired format
-str: Error message
+str: error message
 */
 function error(str) {
     throw new Error(str);
 }
 
 
-module.exports = {makeMap, error}
+
+// AST utils
+
+/*
+generateASTDecode(ast): Generates a map where the keys are AST types and values are official AST names
+return: map of AST type -> official name
+*/
+function generateASTDecode(ast) {
+    // Assumes AST node types are unique (which is a valid assumption)
+    let out = {};
+
+    for (const [k, v] of Object.entries(ast)) {
+        let type = v().type;
+        out[type] = k;
+    }
+
+    return out;
+}
+
+
+
+module.exports = {makeMap, error, generateASTDecode}

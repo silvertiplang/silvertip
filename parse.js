@@ -9,266 +9,15 @@
     - preserve whitespace (attach to token (beforeWhitespaceOrComments)?)
     - parse expressions and operator prescedence
     - add eof token and attach before whitespace and comments
+    - change '|=' -> '||=' and '&=' -> '&&='
 */
 
 
 
 
+const ast = require("./ast");
 const { error, makeMap } = require("./utils");
 const { printToken } = require("./utils_debug");
-
-
-
-// https://github.com/fstirlitz/luaparse/blob/0f525b152516bc8afa34564de2423b039aa83bc1/luaparse.js#L228
-// Documentation and modifiable AST
-let ast = {
-    breakStatement: function() {
-        return {
-            type: 'BreakStatement'
-        };
-    },
-    
-    continueStatement: function() {
-        return {
-            type: 'ContinueStatement'
-        };
-    },
-
-    returnStatement: function(args) {
-        return {
-            type: 'ReturnStatement',
-            arguments: args
-        }
-    },
-
-    ifStatement: function(clauses) {
-        return {
-            type: 'IfStatement',
-            clauses: clauses
-        };
-    },
-    ifClause: function(condition, body) {
-        return {
-            type: 'IfClause',
-            condition: condition,
-            body: body
-        };
-    },
-    elseIfClause: function(condition, body) {
-        return {
-            type: 'ElseIfClause',
-            condition: condition,
-            body: body
-        };
-    },
-    elseClause: function(body) {
-        return {
-            type: 'ElseClause',
-            body: body
-        };
-    },
-
-    whileStatement: function(condition, body) {
-        return {
-            type: 'WhileStatement',
-            condition: condition,
-            body: body
-        };
-    },
-
-    repeatStatement: function(condition, body) {
-        return {
-            type: 'RepeatStatement',
-            condition: condition,
-            body: body
-        };
-    },
-
-    localStatement: function(variables, init) {
-        return {
-            type: 'LocalStatement',
-            variables: variables,
-            init: init
-        };
-    },
-    
-    globalStatement: function(variables, init) {
-        return {
-            type: 'GlobalStatement',
-            variables: variables,
-            init: init
-        };
-    },
-
-    assignmentStatement: function(variables, init) {
-        return {
-            type: 'AssignmentStatement',
-            variables: variables,
-            init: init
-        };
-    },
-
-    operationAssignment: function(operation, variables, init) {
-        return {
-            type: 'OperationAssignment',
-            operation: operation,
-            variables: variables,
-            init: init
-        };
-    },
-
-    callStatement: function(base, args) {
-        return {
-            type: 'CallStatement',
-            base: base,
-            arguments: args
-        };
-    },
-
-    // localFunctionDeclaration: function(identifier, parameters, body) {
-    //     return {
-    //         type: 'LocalFunctionDeclaration',
-    //         identifier: identifier,
-    //         parameters: parameters,
-    //         body: body
-    //     };
-    // },
-
-    // globalFunctionDeclaration: function(identifier, parameters, body) {
-    //     return {
-    //         type: 'GlobalFunctionDeclaration',
-    //         identifier: identifier,
-    //         parameters: parameters,
-    //         body: body
-    //     };
-    // },
-
-    // assignmentFunctionDeclaration: function(identifier, parameters, body) {
-    //     return {
-    //         type: 'AssignmentFunctionDeclaration',
-    //         identifier: identifier,
-    //         parameters: parameters,
-    //         body: body
-    //     };
-    // },
-
-    forNumericStatement: function(variable, start, end, step, body) {
-        return {
-            type: 'ForNumericStatement',
-            variable: variable,
-            start: start,
-            end: end,
-            step: step,
-            body: body
-        };
-    },
-
-    forGenericStatement: function(objectVariable, valueVariable, keyVariable, body) {
-        return {
-            type: 'ForGenericStatement',
-            objectVariable: objectVariable,
-            valueVariable: valueVariable,
-            keyVariable: keyVariable,
-            body: body
-        };
-    },
-
-    chunk: function(body) {
-        return {
-            type: 'Chunk',
-            body: body
-        };
-    },
-
-    asyncStatement: function(body) {
-        return {
-            type: 'AsyncStatement',
-            body: body
-        };
-    },
-
-    identifier: function(name) {
-        return {
-            type: 'Identifier',
-            name: name
-        };
-    },
-
-    literal: function(type, value) {
-        // Type can be 'StringLiteral', 'NumericLiteral', 'BooleanLiteral', 'NullLiteral', 'VarargLiteral'
-  
-        return {
-            type: type,
-            value: value,
-        };
-    },
-
-    tableEntry: function(key, value) {
-        return {
-            type: 'TableEntry',
-            key: key,
-            value: value
-        };
-    },
-    
-    arrayConstructorExpression: function(list) {
-        return {
-            type: 'ArrayConstructorExpression',
-            list: list
-        };
-    },
-    tableConstructorExpression: function(fields) {
-        return {
-            type: 'TableConstructorExpression',
-            fields: fields
-        };
-    },
-    binaryExpression: function(operator, left, right) {
-        let type = ('&&' === operator || '||' === operator) ? 'LogicalExpression' : 'BinaryExpression';
-
-        return {
-            type: type,
-            operator: operator,
-            left: left,
-            right: right
-        };
-    },
-    unaryExpression: function(operator, argument) {
-        return {
-            type: 'UnaryExpression',
-            operator: operator,
-            argument: argument
-        };
-    },
-    indexExpression: function(base, index) {
-        return {
-            type: 'IndexExpression',
-            base: base,
-            index: index
-        };
-    },
-    lambdaExpression: function(parameters, body) {
-        return {
-            type: 'LambdaExpression',
-            parameters: parameters,
-            body: body
-        };
-    },
-
-    comment: function(value) { // ATODO
-        return {
-            type: 'Comment',
-            value: value,
-        };
-    },
-
-    whitespace: function(value) { // ATODO
-        return {
-            type: 'Whitespace',
-            value: value,
-        };
-    }
-};
 
 
 
@@ -548,7 +297,12 @@ function parse(tokens) {
                 noExpression = true;
                 rhs = parseToken(tokens[i]);
                 noExpression = false;
-                current = ast.binaryExpression(operator, current, rhs);
+
+                if ('&&' === operator || '||' === operator) {
+                    current = ast.logicalExpression(operator, current, rhs);
+                } else {
+                    current = ast.binaryExpression(operator, current, rhs);
+                }
             } else {
                 break;
             }
@@ -687,13 +441,128 @@ function parse(tokens) {
     }
 
 
+    function parseAfterIdentifier(identifier, expectAfterListI) {
+        if (!noCall && expect(i, 'symbol', '(')) {
+            let out = ast.callStatement(identifier, []);
+            parseCallArguments(out.arguments);
+            return out;
+        } else if (!noArrow && expect(i, 'operator', '->')) {
+            let oldI = i;
+
+            // forgeneric or lambda or (pipe but irrelevant)
+            // (pipe will be absorbed before it reaches here, and it will be skipped in here)
+            i++;
+            if (expect(i, 'identifier') && expect(getAfterList('identifier'), 'symbol', '{')) {
+                let oldI2 = i;
+                i = oldI - 1;
+                noArrow = true;
+                let objectVariable = parseToken(tokens[i]);
+                noArrow = false;
+                i = oldI2;
+
+                let v = [];
+                parseList(v, 'identifier');
+                let valueVariable, keyVariable;
+                if (v.length == 1) {
+                    valueVariable = v[0];
+                    keyVariable = null;
+                } else {
+                    valueVariable = v[0];
+                    keyVariable = v[1];
+                }
+
+                let out = ast.forGenericStatement(objectVariable, valueVariable, keyVariable, []);
+
+                let oldNode = node;
+                node = out;
+                parseBlock();
+                node = oldNode;
+
+                return out;
+            } else if (expect(i, 'symbol', '{')) {
+                i = i - 2;
+                return parseLambda();
+            } else {
+                // Pipe
+
+                // disregard, it will be processed later (since anything can be piped in)
+
+                // error(`Invalid token '${token.value}' after '->'`);
+            }
+        } else if (!noArrow && expect(expectAfterListI, 'operator', '->')) {
+            // lambda or pipe
+            if (expect(expectAfterListI + 1, 'symbol', '{')) {
+                i--;
+                return parseLambda();
+            } else {
+                // Pipe
+
+                // disregard, it will be processed later (since anything can be piped in)
+
+            }
+        } else if (!noAssignment && expect(expectAfterListI, 'operator', '=')) {
+            let oldI = i;
+            i = expectAfterListI + 1;
+            let forStart = parseExpression();
+            let isFor = expect(i, 'operator', '->');
+
+            if (isFor) {
+                i++;
+                let forEnd = parseExpression();
+
+                // DIRTY, OPTIMIZE
+                let oldI2 = i;
+                i = oldI - 1;
+                noAssignment = true;
+                let forVariable = parseToken(tokens[i]);
+                noAssignment = false;
+                i = oldI2;
+
+                // TODO
+                let forStep = ast.numericLiteral(1);
+
+                let out = ast.forNumericStatement(forVariable, forStart, forEnd, forStep, []);
+
+                let oldNode = node;
+                node = out;
+                parseBlock();
+                node = oldNode;
+
+                return out;
+            } else {
+                i = oldI;
+                i--;
+                let variables = [];
+                let init = [];
+                noAssignment = true;
+                parseAssignment(variables, init);
+                noAssignment = false;
+                return ast.assignmentStatement(variables, init);
+            }
+            
+        } else if (!noAssignment && expect(expectAfterListI, 'operator') && text.operationAssignment[tokens[expectAfterListI].value]) {
+            let operation = tokens[expectAfterListI].value.substring(0, 1);
+            i--;
+            let variables = [];
+            let init = [];
+            noAssignment = true;
+            parseOperationAssignment(variables, init);
+            noAssignment = false;
+            
+            return ast.operationAssignment(operation, variables, init);
+        } else {
+            return identifier;
+        }
+    }
+
+
     // DEBUG
     // let lastToken = null;
 
     function parseToken(token) {
         // DEBUG
         // if (!lastToken || token.type != lastToken.type && token.value != lastToken.value) {
-            printToken(token);
+            // printToken(token);
             // lastToken = token;
         // }
 
@@ -703,27 +572,16 @@ function parse(tokens) {
             case 'identifier': {
                 let expectAfterListI = getAfterList('identifier');
                 i++;
-                if (!noCall && expect(i, 'symbol', '(')) {
-                    let out = ast.callStatement(ast.identifier(token.value), []);
-                    parseCallArguments(out.arguments);
-                    return out;
-                } else if (expect(i, 'symbol', '.')) {
-                    let current = ast.identifier(token.value);
+
+                let current = ast.identifier(token.value);
+                if (expect(i, 'symbol', '.') || expect(i, 'symbol', '[')) {
                     while (true) {
                         if (expect(i, 'symbol', '.') && expect(i + 1, 'identifier')) {
                             i++;
                             let rhs = tokens[i];
-                            current = ast.indexExpression(current, ast.identifier(rhs.value));
+                            current = ast.indexExpression(current, ast.stringLiteral(rhs.value));
                             i++;
-                        } else {
-                            break;
-                        }
-                    }
-                    return current;
-                } else if (expect(i, 'symbol', '[')) {
-                    let current = ast.identifier(token.value);
-                    while (true) {
-                        if (expect(i, 'symbol', '[')) {
+                        } else if (expect(i, 'symbol', '[')) {
                             i++;
                             let rhs = parseExpression();
                             expectError(i, 'symbol', ']');
@@ -733,114 +591,13 @@ function parse(tokens) {
                             break;
                         }
                     }
-                    return current;
-                } else if (!noArrow && expect(i, 'operator', '->')) {
-                    let oldI = i;
-
-                    // forgeneric or lambda or (pipe but irrelevant)
-                    // (pipe will be absorbed before it reaches here, and it will be skipped in here)
-                    i++;
-                    if (expect(i, 'identifier') && expect(getAfterList('identifier'), 'symbol', '{')) {
-                        let oldI2 = i;
-                        i = oldI - 1;
-                        noArrow = true;
-                        let objectVariable = parseToken(tokens[i]);
-                        noArrow = false;
-                        i = oldI2;
-
-                        let v = [];
-                        parseList(v, 'identifier');
-                        let valueVariable, keyVariable;
-                        if (v.length == 1) {
-                            valueVariable = v[0];
-                            keyVariable = null;
-                        } else {
-                            valueVariable = v[0];
-                            keyVariable = v[1];
-                        }
-
-                        let out = ast.forGenericStatement(objectVariable, valueVariable, keyVariable, []);
-
-                        let oldNode = node;
-                        node = out;
-                        parseBlock();
-                        node = oldNode;
-
-                        return out;
-                    } else if (expect(i, 'symbol', '{')) {
-                        i = i - 2;
-                        return parseLambda();
-                    } else {
-                        // Pipe
-
-                        // disregard, it will be processed later (since anything can be piped in)
-
-                        // error(`Invalid token '${token.value}' after '->'`);
-                    }
-                } else if (!noArrow && expect(expectAfterListI, 'operator', '->')) {
-                    // lambda or pipe
-                    if (expect(expectAfterListI + 1, 'symbol', '{')) {
-                        i--;
-                        return parseLambda();
-                    } else {
-                        // Pipe
-
-                        // disregard, it will be processed later (since anything can be piped in)
-
-                    }
-                } else if (!noAssignment && expect(expectAfterListI, 'operator', '=')) {
-                    let oldI = i;
-                    i = expectAfterListI + 1;
-                    let forStart = parseExpression();
-                    let isFor = expect(i, 'operator', '->');
-
-                    if (isFor) {
-                        i++;
-                        let forEnd = parseExpression();
-
-                        // DIRTY, OPTIMIZE
-                        let oldI2 = i;
-                        i = oldI - 1;
-                        noAssignment = true;
-                        let forVariable = parseToken(tokens[i]);
-                        noAssignment = false;
-                        i = oldI2;
-
-                        // TODO
-                        let forStep = ast.literal('NumericLiteral', 1);
-
-                        let out = ast.forNumericStatement(forVariable, forStart, forEnd, forStep, []);
-
-                        let oldNode = node;
-                        node = out;
-                        parseBlock();
-                        node = oldNode;
-
-                        return out;
-                    } else {
-                        i = oldI;
-                        i--;
-                        let variables = [];
-                        let init = [];
-                        noAssignment = true;
-                        parseAssignment(variables, init);
-                        noAssignment = false;
-                        return ast.assignmentStatement(variables, init);
-                    }
-                    
-                } else if (!noAssignment && expect(expectAfterListI, 'operator') && text.operationAssignment[tokens[expectAfterListI].value]) {
-                    let operation = tokens[expectAfterListI].value.substring(0, 1);
+        
                     i--;
-                    let variables = [];
-                    let init = [];
-                    noAssignment = true;
-                    parseOperationAssignment(variables, init);
-                    noAssignment = false;
-                    
-                    return ast.operationAssignment(operation, variables, init);
-                } else {
-                    return ast.identifier(token.value);
+                    expectAfterListI = getAfterList('identifier');
+                    i++;
                 }
+                
+                return parseAfterIdentifier(current, expectAfterListI);
                 break;
             }
             case 'keyword': {
@@ -933,7 +690,7 @@ function parse(tokens) {
                     case 'repeat': {
                         i++;
 
-                        let out = ast.repeatStatement(ast.literal('BooleanLiteral', false), []);
+                        let out = ast.repeatStatement(ast.booleanLiteral(false), []);
 
                         let oldNode = node;
                         node = out;
@@ -1016,7 +773,7 @@ function parse(tokens) {
                     case 'true': {
                         if (noExpression) {
                             i++;
-                            return ast.literal('BooleanLiteral', true);
+                            return ast.booleanLiteral(true);
                         } else {
                             return parseExpressionOrPipe();
                         }
@@ -1025,7 +782,7 @@ function parse(tokens) {
                     case 'false': {
                         if (noExpression) {
                             i++;
-                            return ast.literal('BooleanLiteral', false);
+                            return ast.booleanLiteral(false);
                         } else {
                             return parseExpressionOrPipe();
                         }
@@ -1034,7 +791,7 @@ function parse(tokens) {
                     case 'null': {
                         if (noExpression) {
                             i++;
-                            return ast.literal('NullLiteral', null);
+                            return ast.nullLiteral(null);
                         } else {
                             return parseExpressionOrPipe();
                         }
@@ -1073,7 +830,7 @@ function parse(tokens) {
                                     expectError(i, 'symbol', ']');
                                 } else {
                                     expectError(i, 'identifier');
-                                    key = ast.identifier(tokens[i].value);
+                                    key = ast.stringLiteral(tokens[i].value);
                                 }
                                 i++;
                                 expectError(i, 'symbol', ':');
@@ -1119,7 +876,7 @@ function parse(tokens) {
             case 'string': {
                 if (noExpression) {
                     i++;
-                    return ast.literal('StringLiteral', token.value);
+                    return ast.stringLiteral(token.value);
                 } else {
                     return parseExpressionOrPipe();
                 }
@@ -1133,7 +890,7 @@ function parse(tokens) {
             case 'number': {
                 if (noExpression) {
                     i++;
-                    return ast.literal('NumericLiteral', parseFloat(token.value));
+                    return ast.numericLiteral(parseFloat(token.value));
                 } else {
                     return parseExpressionOrPipe();
 

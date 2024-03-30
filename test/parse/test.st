@@ -60,6 +60,8 @@
 // async {}
 
 // // identifier
+// console.log(2)
+a.b.c = 1
 
 // // literal
 
@@ -78,9 +80,9 @@
 // local a = [1, 2, 3]
 
 // // tableConstructorExpression, tableEntry
-local a = {}
-local a = {a: 1}
-local a = {['a']: 2}
+// local a = {}
+// local a = {a: 1}
+// local a = {['a']: 2}
 
 // // binaryExpression
 // a = 1 + 2 + 3

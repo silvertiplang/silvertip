@@ -2,6 +2,9 @@
     lex.js
 
     convert source code into tokens
+
+    TODO:
+    - strip shebang
 */
 
 
