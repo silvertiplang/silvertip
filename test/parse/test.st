@@ -61,7 +61,10 @@
 
 // // identifier
 // console.log(2)
-a.b.c = 1
+// a.b.c = 1
+// a -> b {}
+// a = b, c -> {return b + c}
+// console.log(a(2, 3))
 
 // // literal
 

@@ -157,7 +157,7 @@ function tojs(ast) {
                 out += ']of Object.entries(';
                 recurse(node.objectVariable);
                 out += ')){';
-                recurseList(node.arguments);
+                recurseList(node.body);
                 out += '}';
                 break;
             }
