@@ -352,64 +352,57 @@ function parse(tokens) {
         expectError(i, 'operator', '->');
 
         let current = first;
-        let initial = true;
+        let iN = 0;
         let finalModifier = null;
 
         while (true) {
-            // if (expect(i, 'operator', '->')) {
+            i++;
+
+            // final modifier
+            if (expect(i, 'keyword')) {
+                finalModifier = tokens[i].value;
                 i++;
+            }
 
-                // final modifier
-                if (expect(i, 'keyword')) {
-                    finalModifier = tokens[i].value;
-                    i++;
-                }
+            let oldI = i;
 
-                let oldI = i;
+            let expr = parseExpression();
+            console.log(expr)
 
-                let expr = parseExpression();
-
-                if (!initial) {
-                    current = [current];
-                    initial = false;
-                }
-
-                if (expect(i, 'operator', '->')) {
-                    // function (or something that is a function)
-                    current = ast.callStatement(expr, current);
-                } else {
-                    // reparse expression (since it is a list)
-                    let expr2 = [];
-                    i = oldI;
-                    parseList(expr2, 'identifier');
-
-                    // final variable
-                    if (!initial) {
-                        current = [current];
-                    }
-                    if (finalModifier == null) {
-                        current = ast.assignmentStatement(expr2, current);
-                    } else if (finalModifier == 'local') {
-                        current = ast.localStatement(expr2, current);
-                    } else if (finalModifier == 'global') {
-                        current = ast.globalStatement(expr2, current);
-                    } else {
-                        error('Unknown final modifier');
-                    }
-                    break;
-                }
-
-                // if (expect(i, 'identifier') && expect(i + 1, 'operator', '->')) {
-                //     // function (optimize for this single case)
-                //     // maybe needs unpack ast to unpack current
-                //     current = ast.callStatement(ast.identifier(tokens[i].value), current);
-                // } else {
-                //     // expression
-                //     // let rhs = parseExpression();
-                //     // current = ast.lambdaExpression()
-                //     expectError('')
-                // }
+            // if (!initial) {
+            //     current = [current];
+            //     initial = false;
             // }
+
+            if (expect(i, 'operator', '->')) {
+                // function (or something that is a function)
+                if (finalModifier != null) {
+                    error('Final modifier came before last')
+                }
+                current = ast.callStatement(expr, current);
+            } else {
+                // reparse expression (since it is a list)
+                let expr2 = [];
+                i = oldI;
+                parseList(expr2, 'identifier');
+
+                // final variable
+                if (iN != 0) {
+                    current = [current];
+                }
+                if (finalModifier == null) {
+                    current = ast.assignmentStatement(expr2, current);
+                } else if (finalModifier == 'local') {
+                    current = ast.localStatement(expr2, current);
+                } else if (finalModifier == 'global') {
+                    current = ast.globalStatement(expr2, current);
+                } else {
+                    error('Unknown final modifier');
+                }
+                break;
+            }
+
+            iN++;
         }
 
         noPipe = false;

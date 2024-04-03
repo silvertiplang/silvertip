@@ -22,7 +22,7 @@ function arrowtipjs(src) {
     console.log(JSON.stringify(ast, null, 2));
     
     let js = tojs(ast);
-    // console.log(js);
+    console.log(js);
 
     return eval(js);
 }
