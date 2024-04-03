@@ -19,7 +19,7 @@ function arrowtipjs(src) {
     // printTokens(tokens);
 
     let ast = parse(tokens);
-    // console.log(JSON.stringify(ast, null, 2));
+    console.log(JSON.stringify(ast, null, 2));
     
     let js = tojs(ast);
     // console.log(js);

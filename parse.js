@@ -384,6 +384,9 @@ function parse(tokens) {
                     parseList(expr2, 'identifier');
 
                     // final variable
+                    if (!initial) {
+                        current = [current];
+                    }
                     if (finalModifier == null) {
                         current = ast.assignmentStatement(expr2, current);
                     } else if (finalModifier == 'local') {
@@ -538,10 +541,15 @@ function parse(tokens) {
                 let containsOnlyIdentifier = identifiersI == extendedIdentifiersI;
                 
                 if (!noCall && length == 1 && expect(extendedIdentifiersI, 'symbol', '(')) {
-                    i = extendedIdentifiersI;
-                    let out = ast.callStatement(extendedIdentifiers[0], []);
-                    parseCallArguments(out.arguments);
-                    return out;
+                    if (noExpression) {
+                        i = extendedIdentifiersI;
+                        let out = ast.callStatement(extendedIdentifiers[0], []);
+                        parseCallArguments(out.arguments);
+                        return out;
+                    } else {
+                        i = originalI;
+                        return parseExpressionOrPipe();
+                    }
                 } else if (!noArrow && (expect(identifiersI, 'operator', '->') || expect(extendedIdentifiersI, 'operator', '->'))) {
                     i++;
                     // forgeneric or lambda or (pipe but irrelevant)
