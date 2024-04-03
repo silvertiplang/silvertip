@@ -9,23 +9,24 @@
 
 const lex = require('./lex.js');
 const parse = require('./parse.js');
+const tocpp = require('./tocppnotype.js');
 const tojs = require('./tojs.js');
 const { printTokens } = require('./utils_debug.js');
 
 
 
-function silvertipjs(src) {
+function silvertipcpp(src) {
     let tokens = lex(src);
     // printTokens(tokens);
 
     let ast = parse(tokens);
-    console.log(JSON.stringify(ast, null, 2));
+    // console.log(JSON.stringify(ast, null, 2));
     
-    let js = tojs(ast);
-    console.log(js);
+    let cpp = tocpp(ast);
+    // console.log(js);
 
-    return eval(js);
+    return cpp;
 }
 
 
-module.exports = silvertipjs;
+module.exports = silvertipcpp;

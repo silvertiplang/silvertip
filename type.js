@@ -11,26 +11,121 @@ const { generateASTDecode, error } = require("./utils");
 let typeMap = generateASTDecode(ast);
 
 
+let opTypes = {
+    '+': ['number', 'string'], // number or string
+    '-': ['number'],
+    '*': ['number'],
+    '/': ['number'],
+    '%': ['number'],
+    '^': ['number'],
+    '==': ['boolean'],
+    '!=': ['boolean'],
+    '<': ['boolean'],
+    '<=': ['boolean'],
+    '>': ['boolean'],
+    '>=': ['boolean'],
+    '&&': ['boolean'],
+    '||': ['boolean'],
+    '!': ['boolean'],
+};
+
+let types = {
+    number: function() {
+        return {
+            type: 'number'
+        };
+    },
+    string: function() {
+        return {
+            type: 'string'
+        };
+    },
+    boolean: function() {
+        return {
+            type: 'boolean'
+        };
+    },
+    function: function() {
+        return {
+            type: 'function'
+        };
+    },
+    null: function() {
+        return {
+            type: 'null'
+        };
+    },
+    array: function() {
+        return {
+            type: 'array'
+        };
+    },
+    table: function() {
+        return {
+            type: 'table'
+        };
+    },
+    undefined: function() {
+        return {
+            type: 'undefined'
+        };
+    },
+};
+
+// Finds intersection of set a and b
+function intersection(a, b) {
+    let out = [];
+    for (let i = 0; i < a.length; i++) {
+        let a1 = a[i];
+        for (let i2 = 0; i2 < b.length; i2++) {
+            let b1 = b[i2];
+            if (a1 === b1) {
+                out.push(a1);
+                break;
+            }
+        }
+    }
+    return out;
+}
+
 
 function type(ast) {
+    /*
+    types are stored under node.t
+    array of potential types are stored under note.pt (node.t is null when potential types, when decided, node.t will be set)
+    scopes are stored under node.s
+
+    t {
+        type: ('number', 'string', 'boolean', 'function', 'null', 'undefined' (TBD), 'array', 'table'),
+        potential: [types, ...],
+    }
+    */
+
+    // Current state
+    let state = {
+        // Current scope
+        scope: {}
+    };
 
 
+    // Sets node.t and deletes potential if theres only one potential type
+    function checkPotential(node) {
+        if (node.t.potential && node.t.potential.length == 1) {
+            node.t = types[node.pt[0]]();
+        }
+    }
 
     
     function recurse(node) {
         switch (typeMap[node.type]) {
             case 'breakStatement': {
-                out += ';break;';
                 break;
             }
             case 'continueStatement': {
-                out += ';continue;';
                 break;
             }
             case 'returnStatement': {
-                out += ';return ';
-                recurseList(node.arguments, true);
-                out += ';';
+                recurseList(node.arguments);
                 break;
             }
             case 'ifStatement': {
@@ -38,184 +133,110 @@ function type(ast) {
                 break;
             }
             case 'ifClause': {
-                out += ';if(';
                 recurse(node.condition);
-                out += '){';
-                recurseList(node.body);
-                out += '}';
+                recurseChunk(node, node.body);
                 break;
             }
             case 'elseIfClause': {
-                out += 'else if(';
                 recurse(node.condition);
-                out += '){';
-                recurseList(node.body);
-                out += '}';
+                recurseChunk(node, node.body);
                 break;
             }
             case 'elseClause': {
-                out += 'else{';
-                recurseList(node.body);
-                out += '}';
+                recurseChunk(node, node.body);
                 break;
             }
             case 'whileStatement': {
-                out += ';while(';
                 recurse(node.condition);
-                out += '){'
-                recurseList(node.body);
-                out += '}';
+                recurseChunk(node, node.body);
                 break;
             }
             case 'repeatStatement': {
-                out += ';do{'
-                recurseList(node.body);
-                out += '}while(!';
+                recurseChunk(node, node.body);
                 recurse(node.condition);
-                out += ');';
                 break;
             }
             case 'localStatement': {
-                out += ';let '
                 for (let i = 0; i < node.variables.length; i++) {
                     let variable = node.variables[i];
                     let init = node.init[i];
-                    if (init) {
-                        recurse(variable);
-                        out += '=';
-                        recurse(init);
-                    } else {
-                        recurse(variable);
-                    }
-                    if (i != node.variables.length - 1) {
-                        out += ',';
-                    }
+                    variable.t = init ? recurse(init) : types.undefined();
+                    state.scope[variable.name] = variable;
                 }
-                out += ';';
                 break;
             }
             case 'globalStatement': {
-                out += ';'
-                for (let i = 0; i < node.variables.length; i++) {
-                    let variable = node.variables[i];
-                    let init = node.init[i];
-                    globals[variable.name] = true; // DIRTY
-                    if (init) {
-                        recurse(variable);
-                        out += '=';
-                        recurse(init);
-                    } else {
-                        recurse(variable);
-                    }
-                    if (i != node.variables.length - 1) {
-                        out += ',';
-                    }
-                }
-                out += ';';
                 break;
             }
             case 'assignmentStatement': {
-                out += ';';
-                let length = node.variables.length < node.init.length ? node.variables.length : node.init.length;
-                for (let i = 0; i < length; i++) {
-                    let variable = node.variables[i];
-                    let init = node.init[i];
-                    recurse(variable);
-                    out += '=';
-                    recurse(init);
-                    out += ';';
-                }
+                // ACCOUNT FOR INDEXEXPRESSION ([], .)
                 break;
             }
             case 'operationAssignment': {
-                // TODO: Optimize
-                
-                out += ';';
                 let length = node.variables.length < node.init.length ? node.variables.length : node.init.length;
                 for (let i = 0; i < length; i++) {
                     let variable = node.variables[i];
                     let init = node.init[i];
-                    recurse(variable);
-                    out += node.operation;
-                    // TODO: ||, && fix
-                    out += '=';
-                    recurse(init);
-                    out += ';';
+                    let op = node.operation;
+                    let v = state.scope[variable.name];
+                    if (!v) {
+
+                    }
+                    if (variable.pt) {
+                        variable.pt = recurse(init);
+                    }
+                    state.scope[variable.name] = variable;
                 }
                 break;
             }
             case 'callStatement': {
                 recurse(node.base);
-                out += '(';
                 recurseList(node.arguments, true);
-                out += ')';
                 break;
             }
             case 'forNumericStatement': {
-                out += ';for(let ';
                 recurse(node.variable);
-                out += '=';
                 recurse(node.start);
-                out += ';';
-                recurse(node.variable);
-                out += '<=';
                 recurse(node.end);
-                out += ';';
-                recurse(node.variable);
-                out += '+=';
                 recurse(node.step);
-                out += '){';
-                recurseList(node.body);
-                out += '}';
+                recurseChunk(node, node.body);
                 break;
             }
             case 'forGenericStatement': {
-                out += ';for(const[';
                 if (node.keyVariable) {
                     recurse(node.keyVariable);
                 }
-                out += ',';
                 recurse(node.valueVariable);
-                out += ']of Object.entries(';
                 recurse(node.objectVariable);
-                out += ')){';
-                recurseList(node.body);
-                out += '}';
+                recurseChunk(node, node.body);
                 break;
             }
             case 'chunk': {
-                recurseList(node.body);
+                recurseChunk(node, node.body);
                 break;
             }
             case 'asyncStatement': {
-                out += ';(async()=>{';
-                recurseList(node.body);
-                out += '})();';
+                recurseChunk(node, node.body);
                 break;
             }
             case 'identifier': {
-                if (globals[node.name]) {
-                    out += '_G.';
-                }
-                out += node.name;
+                node.t = state.scope[node.name].t;
                 break;
             }
             case 'stringLiteral': {
-                out += '\'';
-                out += node.value;
-                out += '\'';
+                return types.string();
                 break;
             }
             case 'numericLiteral': {
-                out += node.value;
+                return types.number();
                 break;
             }
             case 'booleanLiteral': {
-                out += node.value;
+                return types.boolean();
                 break;
             }
             case 'nullLiteral': {
-                out += 'null';
+                return types.null();
                 break;
             }
             case 'varargLiteral': {
@@ -223,60 +244,45 @@ function type(ast) {
                 break;
             }
             case 'tableEntry': {
-                out += '[';
                 recurse(node.key);
-                out += ']:';
                 recurse(node.value);
                 break;
             }
             case 'arrayConstructorExpression': {
-                out += '[';
-                recurseList(node.list, true);
-                out += ']';
+                recurseList(node.list);
+                return types.array();
                 break;
             }
             case 'tableConstructorExpression': {
-                out += '{';
-                recurseList(node.fields, true);
-                out += '}';
+                recurseList(node.fields);
+                return types.table();
                 break;
             }
             case 'logicalExpression': {
-                out += '(';
-                recurse(node.left);
-                out += node.operator;
-                recurse(node.right);
-                out += ')';
+                return types.boolean();
                 break;
             }
             case 'binaryExpression': {
-                out += '(';
                 recurse(node.left);
-                out += node.operator;
                 recurse(node.right);
-                out += ')';
                 break;
             }
             case 'unaryExpression': {
-                out += '(';
-                out += node.operator;
                 recurse(node.argument);
-                out += ')';
+                if (node.operator == '-') {
+                    return types.number();
+                }
                 break;
             }
             case 'indexExpression': {
                 recurse(node.base);
-                out += '[';
                 recurse(node.index);
-                out += ']';
                 break;
             }
             case 'lambdaExpression': {
-                out += '(';
                 recurseList(node.parameters, true);
-                out += ')=>{';
-                recurseList(node.body);
-                out += '}'
+                recurseChunk(node, node.body);
+                return types.function();
                 break;
             }
             case 'comment': {
@@ -293,13 +299,19 @@ function type(ast) {
             }
         }
     }
-    function recurseList(list, addCommas) {
+    function recurseList(list) {
         for (let i = 0; i < list.length; i++) {
             recurse(list[i]);
-            if (addCommas && i != list.length - 1) {
-                out += ',';
-            }
         }
+    }
+    function recurseChunk(node, body) {
+        let oldScope = state.scope;
+        node.s = structuredClone(state.scope);
+        state.scope = node.s;
+        for (let i = 0; i < body.length; i++) {
+            recurse(body[i]);
+        }
+        state.scope = oldScope;
     }
 
     recurse(ast);

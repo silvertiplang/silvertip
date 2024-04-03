@@ -1,3 +1,7 @@
+TODO:
+- change &= to &&=, |= to ||=
+
+
 # silvertip: A fast, concise, and easy to use language that compiles to C++ with automatic type inference.
 
 Currently in heavy development

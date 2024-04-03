@@ -1,0 +1,5 @@
+/*
+    typecheck.js
+
+    check types to see if they are valid
+*/

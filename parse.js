@@ -367,7 +367,6 @@ function parse(tokens) {
             let oldI = i;
 
             let expr = parseExpression();
-            console.log(expr)
 
             // if (!initial) {
             //     current = [current];
