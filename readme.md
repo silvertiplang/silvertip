@@ -1,5 +1,6 @@
 TODO:
 - change &= to &&=, |= to ||=
+- add semicolon after call statement if not part of expression
 
 
 # silvertip: A fast, concise, and easy to use language that compiles to C++ with automatic type inference.

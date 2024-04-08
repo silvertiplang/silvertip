@@ -1,3 +1,5 @@
+// TODO: IMPLEMENT OPTIMIZATION FLAGS: https://stackoverflow.com/a/55229614
+
 const silvertipjs = require('../silvertipcppnotype');
 const main = require('../main');
 

@@ -5,8 +5,8 @@ local a = b, c -> {return b + c}
 
 1, 2 -> a -> local z
 
-printf("My age is ")
+print("My age is ")
 
-i = 1 -> 3 {
-    printf(to_string(i))
+i = 1 -> 30000000 {
+    print(i)
 }

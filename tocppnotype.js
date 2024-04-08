@@ -299,6 +299,14 @@ function tocpp(ast) {
 
     // out += '#include<bits/stdc++>\nusing namespace std;int main(){';
     out += '#include"./stdc++.h"\nusing namespace std;int main(){';
+
+    // silvertip cpp runtime
+    out += `// silvertip c++ runtime
+auto print = [] (auto a) {
+    cout << a << endl;
+}
+`
+
     recurse(ast);
     out += ';}';
 

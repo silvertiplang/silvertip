@@ -300,6 +300,12 @@ function tojs(ast) {
     }
 
     out += '_G={};';
+
+    // silvertip js runtime
+    out += `// silvertip c++ runtime
+print = console.log;
+`
+
     recurse(ast);
 
     return out;
