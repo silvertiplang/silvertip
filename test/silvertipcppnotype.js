@@ -1,7 +1,7 @@
 // TODO: IMPLEMENT OPTIMIZATION FLAGS: https://stackoverflow.com/a/55229614
 
 const silvertipjs = require('../silvertipcppnotype');
-const main = require('../main');
+const main = require('../main_test');
 
 const fsp = require('fs').promises;
 
