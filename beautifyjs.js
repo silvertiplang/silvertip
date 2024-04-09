@@ -8,10 +8,11 @@
 
 
 const prettier = require("prettier/standalone");
+const plugins = [require("prettier/plugins/estree"), require("prettier/plugins/babel")];
 
 
 async function beautifyjs(js) {
-    return await prettier.format(js, {parser: 'babel'});
+    return await prettier.format(js, {parser: 'babel', plugins: plugins});
 }
 
 // console.log(beautifyjs('let b=2;;;;'))
