@@ -20,14 +20,20 @@
 // }
 
 
-local a = b, c -> {return b + c}
+// local a = b, c -> {return b + c}
 
 
-1, 2 -> a -> local z
+// 1, 2 -> a -> local z
 
 // TODO: FIX
 // a() -> local z
 
 // a() -> (t) -> {console.log(t) return t} -> local z
 
-console.log(z)
+// console.log(z)
+
+
+
+local a = 2
+local b = d -> {return 2}
+a -> b -> local c

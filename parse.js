@@ -407,6 +407,7 @@ function parse(tokens) {
         noPipe = false;
         noArrow = false;
 
+        // console.log(current);
         return current;
     }
 
@@ -577,6 +578,13 @@ function parse(tokens) {
                         return parseLambda();
                     } else {
                         // Pipe
+
+                        // NEVERMIND IT WON'T BE PROCESSED LATER
+                        i++;
+                        console.log(extendedIdentifiers, tokens[i])
+                        return parsePipe(extendedIdentifiers);
+
+
 
                         // disregard, it will be processed later (since anything can be piped in)
 
