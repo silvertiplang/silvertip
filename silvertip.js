@@ -12,4 +12,8 @@ module.exports = {
     minifyjs: require('./minifyjs'),
     beautifyjs: require('./beautifyjs'),
     silvertipjs: require('./silvertipjs'),
+
+    experimental: {
+        tocpp: require('./tocppnotype'),
+    },
 };
