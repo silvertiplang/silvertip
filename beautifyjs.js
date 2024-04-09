@@ -7,10 +7,11 @@
 */
 
 
-const synchronizedPrettier = require("@prettier/sync");
+const prettier = require("prettier/standalone");
 
-function beautifyjs(js) {
-    return synchronizedPrettier.format(js, {parser: 'babel'});
+
+async function beautifyjs(js) {
+    return await prettier.format(js, {parser: 'babel'});
 }
 
 // console.log(beautifyjs('let b=2;;;;'))
