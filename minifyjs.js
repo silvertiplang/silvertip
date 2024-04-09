@@ -7,10 +7,10 @@
 
 
 
-let UglifyJS = require("uglify-js");
+const { minify_sync } = require("terser");
 
 function minifyjs(js) {
-    return UglifyJS.minify(js).code;
+    return minify_sync(js).code;
 }
 
 // console.log(minifyjs('let a = 2;;;;'))

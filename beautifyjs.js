@@ -7,15 +7,10 @@
 */
 
 
-let UglifyJS = require("uglify-js");
+const synchronizedPrettier = require("@prettier/sync");
 
 function beautifyjs(js) {
-    return UglifyJS.minify(js, {
-        output: {
-            comments: 'all',
-            beautify: true
-        }
-    }).code;
+    return synchronizedPrettier.format(js, {parser: 'babel'});
 }
 
 // console.log(beautifyjs('let b=2;;;;'))
