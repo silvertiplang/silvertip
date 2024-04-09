@@ -302,7 +302,7 @@ function tojs(ast) {
     out += '_G={};';
 
     // silvertip js runtime
-    out += `// silvertip c++ runtime
+    out += `// silvertip js runtime
 print = console.log;
 `
 

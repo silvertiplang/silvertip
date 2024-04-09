@@ -1,5 +1,5 @@
 const silvertipjs = require('../silvertipjs');
-const main = require('../main');
+// const main = require('../main');
 
 const fsp = require('fs').promises;
 
