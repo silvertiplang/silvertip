@@ -299,7 +299,7 @@ function tojs(ast) {
         }
     }
 
-    out += '_G={};';
+    out += 'const _G={};';
 
     // silvertip js runtime
     out += `// silvertip js runtime
