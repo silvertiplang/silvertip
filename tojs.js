@@ -14,37 +14,30 @@ function tojs(ast) {
     // traverse ast and output
     let out = '';
     let globals = {};
-
-    let parentParent = null;
-    let parent = null;
     function recurse(node) {
-        parentParent = parent;
-        parent = node;
-        
         switch (typeMap[node.type]) {
             case 'breakStatement': {
-                out += ';break;';
+                out += 'break';
                 break;
             }
             case 'continueStatement': {
-                out += ';continue;';
+                out += 'continue';
                 break;
             }
             case 'returnStatement': {
-                out += ';return ';
-                recurseList(node.arguments, true);
-                out += ';';
+                out += 'return ';
+                recurseList(node.arguments);
                 break;
             }
             case 'ifStatement': {
-                recurseList(node.clauses);
+                recurseConcat(node.clauses);
                 break;
             }
             case 'ifClause': {
-                out += ';if(';
+                out += 'if(';
                 recurse(node.condition);
                 out += '){';
-                recurseList(node.body);
+                recurseBody(node.body);
                 out += '}';
                 break;
             }
@@ -52,34 +45,34 @@ function tojs(ast) {
                 out += 'else if(';
                 recurse(node.condition);
                 out += '){';
-                recurseList(node.body);
+                recurseBody(node.body);
                 out += '}';
                 break;
             }
             case 'elseClause': {
                 out += 'else{';
-                recurseList(node.body);
+                recurseBody(node.body);
                 out += '}';
                 break;
             }
             case 'whileStatement': {
-                out += ';while(';
+                out += 'while(';
                 recurse(node.condition);
-                out += '){'
-                recurseList(node.body);
+                out += '){';
+                recurseBody(node.body);
                 out += '}';
                 break;
             }
             case 'repeatStatement': {
-                out += ';do{';
-                recurseList(node.body);
+                out += 'do{';
+                recurseBody(node.body);
                 out += '}while(!';
                 recurse(node.condition);
-                out += ');';
+                out += ')';
                 break;
             }
             case 'localStatement': {
-                out += ';let ';
+                out += 'let ';
                 for (let i = 0; i < node.variables.length; i++) {
                     let variable = node.variables[i];
                     let init = node.init[i];
@@ -94,11 +87,9 @@ function tojs(ast) {
                         out += ',';
                     }
                 }
-                out += ';';
                 break;
             }
             case 'globalStatement': {
-                out += ';';
                 for (let i = 0; i < node.variables.length; i++) {
                     let variable = node.variables[i];
                     let init = node.init[i];
@@ -114,11 +105,9 @@ function tojs(ast) {
                         out += ',';
                     }
                 }
-                out += ';';
                 break;
             }
             case 'assignmentStatement': {
-                out += ';';
                 let length = node.variables.length < node.init.length ? node.variables.length : node.init.length;
                 for (let i = 0; i < length; i++) {
                     let variable = node.variables[i];
@@ -133,7 +122,6 @@ function tojs(ast) {
             case 'operationAssignment': {
                 // TODO: Optimize
                 
-                out += ';';
                 let length = node.variables.length < node.init.length ? node.variables.length : node.init.length;
                 for (let i = 0; i < length; i++) {
                     let variable = node.variables[i];
@@ -150,15 +138,12 @@ function tojs(ast) {
             case 'callStatement': {
                 recurse(node.base);
                 out += '(';
-                recurseList(node.arguments, true);
+                recurseList(node.arguments);
                 out += ')';
-                if (parentParent && parentParent.body) {
-                    out += ';';
-                }
                 break;
             }
             case 'forNumericStatement': {
-                out += ';for(let ';
+                out += 'for(let ';
                 recurse(node.variable);
                 out += '=';
                 recurse(node.start);
@@ -171,12 +156,12 @@ function tojs(ast) {
                 out += '+=';
                 recurse(node.step);
                 out += '){';
-                recurseList(node.body);
+                recurseBody(node.body);
                 out += '}';
                 break;
             }
             case 'forGenericStatement': {
-                out += ';for(const[';
+                out += 'for(const[';
                 if (node.keyVariable) {
                     recurse(node.keyVariable);
                 }
@@ -185,17 +170,17 @@ function tojs(ast) {
                 out += ']of Object.entries(';
                 recurse(node.objectVariable);
                 out += ')){';
-                recurseList(node.body);
+                recurseBody(node.body);
                 out += '}';
                 break;
             }
             case 'chunk': {
-                recurseList(node.body);
+                recurseBody(node.body);
                 break;
             }
             case 'asyncStatement': {
-                out += ';(async()=>{';
-                recurseList(node.body);
+                out += '(async()=>{';
+                recurseBody(node.body);
                 out += '})();';
                 break;
             }
@@ -237,13 +222,13 @@ function tojs(ast) {
             }
             case 'arrayConstructorExpression': {
                 out += '[';
-                recurseList(node.list, true);
+                recurseList(node.list);
                 out += ']';
                 break;
             }
             case 'tableConstructorExpression': {
                 out += '{';
-                recurseList(node.fields, true);
+                recurseList(node.fields);
                 out += '}';
                 break;
             }
@@ -279,9 +264,9 @@ function tojs(ast) {
             }
             case 'lambdaExpression': {
                 out += '(';
-                recurseList(node.parameters, true);
+                recurseList(node.parameters);
                 out += ')=>{';
-                recurseList(node.body);
+                recurseBody(node.body);
                 out += '}'
                 break;
             }
@@ -299,11 +284,24 @@ function tojs(ast) {
             }
         }
     }
-    function recurseList(list, addCommas) {
+    function recurseConcat(list) {
         for (let i = 0; i < list.length; i++) {
             recurse(list[i]);
-            if (addCommas && i != list.length - 1) {
+        }
+    }
+    function recurseList(list) {
+        for (let i = 0; i < list.length; i++) {
+            recurse(list[i]);
+            if (i != list.length - 1) {
                 out += ',';
+            }
+        }
+    }
+    function recurseBody(list) {
+        for (let i = 0; i < list.length; i++) {
+            recurse(list[i]);
+            if (i != list.length - 1) {
+                out += ';';
             }
         }
     }

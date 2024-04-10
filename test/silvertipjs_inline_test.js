@@ -1,9 +1,8 @@
 const silvertipjs = require('../silvertipjs');
 
 let data = `
-if a == 2 {
-    
-}
+a()
+b()
 `;
 
 silvertipjs(data);
