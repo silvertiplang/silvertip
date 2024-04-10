@@ -14,6 +14,40 @@ function tojs(ast) {
     // traverse ast and output
     let out = '';
     let globals = {};
+
+    // let state = {
+    //     // If there is no way that it is multiple, false. If there is a slight possibility that it is multiple, true.
+    //     lambdaReturnMultiple: null,
+    // };
+
+    // function scanReturn(node) {
+    //     if (node.body) {
+    //         for (let i = 0; i < node.body.length; i++) {
+    //             let o = scanReturn(node.body[i]);
+    //             if (o) {
+    //                 return true;
+    //             }
+    //         }
+    //         return false;
+    //     } else {
+    //         if (typeMap[node.type] == 'returnStatement') {
+    //             if (node.arguments.length > 1) {
+    //                 return true;
+    //             } else if (node.arguments.length == 0) {
+    //                 return false;
+    //             } else { // == 1
+    //                 if (typeMap[node.arguments[0].type] == 'callStatement') {
+    //                     return true;
+    //                 } else {
+    //                     return false;
+    //                 }
+    //             }
+    //         } else {
+    //             return false;
+    //         }
+    //     }
+    // }
+
     function recurse(node) {
         switch (typeMap[node.type]) {
             case 'breakStatement': {
@@ -25,9 +59,24 @@ function tojs(ast) {
                 break;
             }
             case 'returnStatement': {
-                // TODO: 2 args
                 out += 'return ';
-                recurseList(node.arguments);
+                if (state.lambdaReturnMultiple) {
+                    out += '[';
+                    for (let i = 0; i < node.arguments.length; i++) {
+                        let argument = node.arguments[i];
+                        if (typeMap[argument.type] == 'callStatement') {
+                            recurse(argument);
+                        } else {
+                            recurse(argument);
+                        }
+                        if (i != node.arguments.length - 1) {
+                            out += ',';
+                        }
+                    }
+                    out += ']';
+                } else {
+                    recurseList(node.arguments);
+                }
                 break;
             }
             case 'ifStatement': {
@@ -271,7 +320,15 @@ function tojs(ast) {
                 out += '(';
                 recurseList(node.parameters);
                 out += ')=>{';
+
+                // scan for return statements and check number
+                let oldState = state.lambdaReturnMultiple;
+                state.lambdaReturnMultiple = scanReturn(node);
+
                 recurseBody(node.body);
+
+                state.lambdaReturnMultiple = oldState;
+
                 out += '}'
                 break;
             }
