@@ -15,7 +15,68 @@ function tojs(ast) {
     let out = '';
     let globals = {};
 
-    let state = {
+    // recurse assignment with a call statement in its init
+    function recurseAssignmentCall(node) {
+        out += '[';
+        recurseList(node.variables);
+        out += ']=[';
+        for (let i = 0; i < node.init.length; i++) {
+            let v = node.init[i];
+            if (typeMap[v.type] == 'callStatement') {
+                out += '...';
+            }
+            recurse(v);
+            if (i != node.init.length - 1) {
+                out += ',';
+            }
+        }
+        out += ']';
+    }
+    function checkFor(nodeList, type) {
+        for (let i = 0; i < nodeList.length; i++) {
+            if (typeMap[nodeList[i].type] == type) {
+                return true;
+            }
+        }
+        return false;
+    }
+    function recurseAssignmentOptionalInit(node) {
+        if (checkFor(node.init, 'callStatement')) {
+            recurseAssignmentCall(node);
+        } else {
+            out += ' ';
+            for (let i = 0; i < node.variables.length; i++) {
+                let variable = node.variables[i];
+                let init = node.init[i];
+                if (init) {
+                    recurse(variable);
+                    out += '=';
+                    recurse(init);
+                } else {
+                    recurse(variable);
+                }
+                if (i != node.variables.length - 1) {
+                    out += ',';
+                }
+            }
+        }
+    }
+    function recurseAssignmentCallRequiredInit(node) {
+        if (checkFor(node.init, 'callStatement')) {
+            recurseAssignmentCall(node);
+        } else {
+            let length = node.variables.length < node.init.length ? node.variables.length : node.init.length;
+            for (let i = 0; i < length; i++) {
+                let variable = node.variables[i];
+                let init = node.init[i];
+                recurse(variable);
+                out += '=';
+                recurse(init);
+                if (i != length - 1) {
+                    out += ';';
+                }
+            }
+        }
     }
 
     function recurse(node) {
@@ -77,53 +138,17 @@ function tojs(ast) {
                 break;
             }
             case 'localStatement': {
-                out += 'let ';
-                for (let i = 0; i < node.variables.length; i++) {
-                    let variable = node.variables[i];
-                    let init = node.init[i];
-                    if (init) {
-                        recurse(variable);
-                        out += '=';
-                        recurse(init);
-                    } else {
-                        recurse(variable);
-                    }
-                    if (i != node.variables.length - 1) {
-                        out += ',';
-                    }
-                }
+                out += 'let';
+                recurseAssignmentOptionalInit(node);
                 break;
             }
             case 'globalStatement': {
-                for (let i = 0; i < node.variables.length; i++) {
-                    let variable = node.variables[i];
-                    let init = node.init[i];
-                    globals[variable.name] = true; // DIRTY
-                    if (init) {
-                        recurse(variable);
-                        out += '=';
-                        recurse(init);
-                    } else {
-                        recurse(variable);
-                    }
-                    if (i != node.variables.length - 1) {
-                        out += ',';
-                    }
-                }
+                out += 'global';
+                recurseAssignmentOptionalInit(node);
                 break;
             }
             case 'assignmentStatement': {
-                let length = node.variables.length < node.init.length ? node.variables.length : node.init.length;
-                for (let i = 0; i < length; i++) {
-                    let variable = node.variables[i];
-                    let init = node.init[i];
-                    recurse(variable);
-                    out += '=';
-                    recurse(init);
-                    if (i != length - 1) {
-                        out += ';';
-                    }
-                }
+                recurseAssignmentCallRequiredInit(node);
                 break;
             }
             case 'operationAssignment': {

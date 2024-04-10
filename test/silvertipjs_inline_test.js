@@ -28,14 +28,17 @@ src = `
 
 // local a = a() && 1
 // local a = a() + 1
-// local a = -a()
+local a = -a()
 // local a = {[a()]: 2}
 // local a = {a: a()}
 // local a = a[a()]
 
-// TODO IMPLEMENT INDEXING
-local a = a()[1][1]
+// local a = a()[1][1].as
 
+a -> a -> a -> a -> a -> a
+
+2, 3 -> local a, b
+local a, b = a(), 2
 `
 
 // silvertipjs(data);

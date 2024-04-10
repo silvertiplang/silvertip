@@ -376,6 +376,7 @@ function parse(tokens) {
         let current = first;
         let iN = 0;
         let finalModifier = null;
+        let firstRun = true;
 
         while (true) {
             i++;
@@ -400,6 +401,13 @@ function parse(tokens) {
                 if (finalModifier != null) {
                     error('Final modifier came before last')
                 }
+
+                if (firstRun) {
+                    firstRun = false;
+                } else {
+                    current = [current];
+                }
+
                 current = ast.callStatement(expr, current);
             } else {
                 // reparse expression (since it is a list)
