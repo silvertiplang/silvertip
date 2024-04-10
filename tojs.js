@@ -14,7 +14,13 @@ function tojs(ast) {
     // traverse ast and output
     let out = '';
     let globals = {};
+
+    let parentParent = null;
+    let parent = null;
     function recurse(node) {
+        parentParent = parent;
+        parent = node;
+        
         switch (typeMap[node.type]) {
             case 'breakStatement': {
                 out += ';break;';
@@ -146,6 +152,9 @@ function tojs(ast) {
                 out += '(';
                 recurseList(node.arguments, true);
                 out += ')';
+                if (parentParent && parentParent.body) {
+                    out += ';';
+                }
                 break;
             }
             case 'forNumericStatement': {

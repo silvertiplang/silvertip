@@ -301,10 +301,29 @@ function tocpp(ast) {
     out += '#include"./stdc++.h"\nusing namespace std;int main(){';
 
     // silvertip cpp runtime
-    out += `// silvertip c++ runtime
-auto print = [] (auto a) {
-    cout << a << endl;
-}
+    out += `
+// silvertip c++ runtime
+auto print = [] (auto v) {
+    cout << v << endl;
+};
+// auto toGenericPointer = [] (auto v) {
+//     return &v;
+// };
+// auto toString = [] (auto v) {
+
+// };
+// auto toNumeric = [] (auto v) {
+
+// };
+// auto toBoolean = [] (auto v) {
+
+// };
+// auto toBoolean = [] (auto v) {
+//     return ()
+// };
+// auto toNull = [] {
+//     return null;
+// }
 `
 
     recurse(ast);

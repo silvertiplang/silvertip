@@ -41,5 +41,24 @@ function generateASTDecode(ast) {
 }
 
 
+/*
+assignParents(ast): Assign parents to all the nodes except the base node
+returns: ast, mutated
+*/
+function assignParents(ast) {
+    function recurse(node) {
+        for (const [k, v] of Object.entries(node)) {
+            if (typeof v == 'object') {
+                v.parent = node;
+                recurse(node);
+            }
+        }
+    }
 
-module.exports = {makeMap, error, generateASTDecode}
+    recurse(ast);
+    return ast;
+}
+
+
+
+module.exports = {makeMap, error, generateASTDecode, assignParents}

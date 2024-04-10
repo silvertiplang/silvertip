@@ -156,10 +156,10 @@ function parse(tokens) {
         }
     }
 
-    function parseCondition() {
-        let condition = parseToken(tokens[i]);
-        return condition;
-    }
+    // function parseCondition() {
+    //     let condition = parseExpression();
+    //     return condition;
+    // }
 
     // Internally used for parsing args for functions and lambdas and function calls
     function parseArguments(list) {
@@ -581,7 +581,7 @@ function parse(tokens) {
 
                         // NEVERMIND IT WON'T BE PROCESSED LATER
                         i++;
-                        console.log(extendedIdentifiers, tokens[i])
+                        // console.log(extendedIdentifiers, tokens[i])
                         return parsePipe(extendedIdentifiers);
 
 
@@ -705,7 +705,7 @@ function parse(tokens) {
                     case 'while': {
                         i++;
 
-                        let condition = parseCondition();
+                        let condition = parseExpression();
 
                         let out = ast.whileStatement(condition, []);
 
@@ -733,7 +733,7 @@ function parse(tokens) {
 
                         if (expect(i, 'keyword', 'until')) {
                             i++;
-                            out.condition = parseCondition();
+                            out.condition = parseExpression();
                         }
 
                         return out;
@@ -752,7 +752,7 @@ function parse(tokens) {
                     case 'if': {
                         i++;
 
-                        let condition = parseCondition();
+                        let condition = parseExpression();
 
                         let oldNode = node;
 
@@ -763,7 +763,7 @@ function parse(tokens) {
                         while (expect(i, 'keyword', 'elseif')) {
                             i++;
 
-                            let condition = parseCondition();
+                            let condition = parseExpression();
 
                             node = ast.elseIfClause(condition, []);
                             out.clauses.push(node);
