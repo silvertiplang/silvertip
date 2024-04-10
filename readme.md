@@ -1,7 +1,6 @@
 TODO:
 - change &= to &&=, |= to ||=
-- add semicolon after call statement if not part of expression
-- add semicolon to lone callstatement (check if in parent.body)
+- use context (is expecting statement?) in lex to resolve lambda/pipe a -> b
 
 
 # silvertip: A fast, concise, and easy to use language that compiles to C++ with automatic type inference.

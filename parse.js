@@ -227,7 +227,7 @@ function parse(tokens) {
             parseBlock();
             node = oldNode;
         } else {
-            out.body.push(ast.returnStatement(parseExpression()));
+            out.body.push(ast.returnStatement([parseExpression()]));
         }
 
         return out;
@@ -497,7 +497,7 @@ function parse(tokens) {
     // DEBUG
     // let lastToken = null;
 
-    function parseToken(token) {
+    function parseToken(token, isStatement) {
         // DEBUG
         // if (!lastToken || token.type != lastToken.type && token.value != lastToken.value) {
             // printToken(token);
@@ -573,14 +573,16 @@ function parse(tokens) {
                         node = oldNode;
 
                         return out;
-                    } else if (expect(extendedIdentifiersI + 1, 'symbol', '{')) {
+                    // } else if (expect(extendedIdentifiersI + 1, 'symbol', '{')) {
+                    } else if (!isStatement) {
                         i = originalI;
                         return parseLambda();
                     } else {
                         // Pipe
 
                         // NEVERMIND IT WON'T BE PROCESSED LATER
-                        i++;
+                        i--;
+                        // console.log(tokens[i - 1])
                         // console.log(extendedIdentifiers, tokens[i])
                         return parsePipe(extendedIdentifiers);
 
@@ -980,7 +982,7 @@ function parse(tokens) {
             }
 
             let token = tokens[i];
-            node.body.push(parseToken(token));
+            node.body.push(parseToken(token, true));
             if (nextNode) {
                 node = nextNode;
                 nextNode = false;
@@ -991,7 +993,7 @@ function parse(tokens) {
 
     while (i < tokens.length) {
         let token = tokens[i];
-        node.body.push(parseToken(token));
+        node.body.push(parseToken(token, true));
         if (nextNode) {
             node = nextNode;
             nextNode = false;

@@ -115,7 +115,9 @@ function tojs(ast) {
                     recurse(variable);
                     out += '=';
                     recurse(init);
-                    out += ';';
+                    if (i != length - 1) {
+                        out += ';';
+                    }
                 }
                 break;
             }
@@ -131,7 +133,9 @@ function tojs(ast) {
                     // TODO: ||, && fix
                     out += '=';
                     recurse(init);
-                    out += ';';
+                    if (i != length - 1) {
+                        out += ';';
+                    }
                 }
                 break;
             }
@@ -181,7 +185,7 @@ function tojs(ast) {
             case 'asyncStatement': {
                 out += '(async()=>{';
                 recurseBody(node.body);
-                out += '})();';
+                out += '})()';
                 break;
             }
             case 'identifier': {
