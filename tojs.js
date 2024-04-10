@@ -15,38 +15,8 @@ function tojs(ast) {
     let out = '';
     let globals = {};
 
-    // let state = {
-    //     // If there is no way that it is multiple, false. If there is a slight possibility that it is multiple, true.
-    //     lambdaReturnMultiple: null,
-    // };
-
-    // function scanReturn(node) {
-    //     if (node.body) {
-    //         for (let i = 0; i < node.body.length; i++) {
-    //             let o = scanReturn(node.body[i]);
-    //             if (o) {
-    //                 return true;
-    //             }
-    //         }
-    //         return false;
-    //     } else {
-    //         if (typeMap[node.type] == 'returnStatement') {
-    //             if (node.arguments.length > 1) {
-    //                 return true;
-    //             } else if (node.arguments.length == 0) {
-    //                 return false;
-    //             } else { // == 1
-    //                 if (typeMap[node.arguments[0].type] == 'callStatement') {
-    //                     return true;
-    //                 } else {
-    //                     return false;
-    //                 }
-    //             }
-    //         } else {
-    //             return false;
-    //         }
-    //     }
-    // }
+    let state = {
+    }
 
     function recurse(node) {
         switch (typeMap[node.type]) {
@@ -59,24 +29,9 @@ function tojs(ast) {
                 break;
             }
             case 'returnStatement': {
-                out += 'return ';
-                if (state.lambdaReturnMultiple) {
-                    out += '[';
-                    for (let i = 0; i < node.arguments.length; i++) {
-                        let argument = node.arguments[i];
-                        if (typeMap[argument.type] == 'callStatement') {
-                            recurse(argument);
-                        } else {
-                            recurse(argument);
-                        }
-                        if (i != node.arguments.length - 1) {
-                            out += ',';
-                        }
-                    }
-                    out += ']';
-                } else {
-                    recurseList(node.arguments);
-                }
+                out += 'return[';
+                recurseList(node.arguments);
+                out += ']';
                 break;
             }
             case 'ifStatement': {
@@ -190,10 +145,23 @@ function tojs(ast) {
                 break;
             }
             case 'callStatement': {
+                let parentType = typeMap[node.parent.type];
+
+                // console.log(parentType);
+                // TODO: ASSESS NEED FOR PARENTHESIS AROUND WHOLE EXPRESSION
+                if (parentType == 'returnStatement' || parentType == 'arrayConstructorExpression' || parentType == 'callStatement') {
+                    out += '...';
+                }
+
                 recurse(node.base);
                 out += '(';
                 recurseList(node.arguments);
                 out += ')';
+
+                if (parentType == 'logicalExpression' || parentType == 'binaryExpression' || parentType == 'unaryExpression' || parentType == 'tableEntry' || parentType == 'indexExpression') {
+                    out += '[0]';
+                }
+
                 break;
             }
             case 'forNumericStatement': {
@@ -320,15 +288,7 @@ function tojs(ast) {
                 out += '(';
                 recurseList(node.parameters);
                 out += ')=>{';
-
-                // scan for return statements and check number
-                let oldState = state.lambdaReturnMultiple;
-                state.lambdaReturnMultiple = scanReturn(node);
-
                 recurseBody(node.body);
-
-                state.lambdaReturnMultiple = oldState;
-
                 out += '}'
                 break;
             }

@@ -31,5 +31,15 @@ function concatTokens(tokens) {
     return s;
 }
 
+function printAST(ast) {
+    let s = JSON.stringify(ast, (k, v) => {
+        if (k == 'parent') {
+            return undefined;
+        } else {
+            return v;
+        }
+    }, 2);
+    console.log(s);
+}
 
-module.exports = {printToken, printTokens, concatTokens};
+module.exports = {printToken, printTokens, concatTokens, printAST};

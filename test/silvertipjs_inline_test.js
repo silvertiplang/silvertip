@@ -3,6 +3,8 @@ const parse = require('../parse');
 const silvertipjs = require('../silvertipjs');
 const tojs = require('../tojs');
 const tolua = require('../tolua');
+const { assignParents } = require('../utils');
+const { printAST } = require('../utils_debug');
 
 let src = `
 // local a, b = 1, 2
@@ -11,7 +13,30 @@ let src = `
 local function a() {
     return 1, 2
 }
+console.log(a())
 `;
+
+src = `
+// local function a() {
+//     return 1
+// }
+// local function b() {
+//     return a()
+// }
+// local a = [a()]
+// a(a())
+
+// local a = a() && 1
+// local a = a() + 1
+// local a = -a()
+// local a = {[a()]: 2}
+// local a = {a: a()}
+// local a = a[a()]
+
+// TODO IMPLEMENT INDEXING
+local a = a()[1][1]
+
+`
 
 // silvertipjs(data);
 
@@ -19,12 +44,13 @@ let tokens = lex(src);
 // printTokens(tokens);
 
 let ast = parse(tokens);
-console.log(JSON.stringify(ast, null, 2));
+printAST(ast);
 
 let js = tojs(ast);
 console.log(js);
 
-let lua = tolua(ast);
-console.log(lua);
+// let lua = tolua(ast);
+// console.log(lua);
 
 // return eval(js);
+

@@ -16,7 +16,7 @@
 
 
 const ast = require("./ast");
-const { error, makeMap } = require("./utils");
+const { error, makeMap, assignParents } = require("./utils");
 const { printToken } = require("./utils_debug");
 
 
@@ -301,6 +301,28 @@ function parse(tokens) {
                 break;
             }
         }
+
+        
+        // indexing at the end
+        while (true) {
+            if (expect(i, 'symbol', '.') && expect(i + 1, 'identifier')) {
+                i++;
+                let rhs = tokens[i];
+                current = ast.indexExpression(current, ast.stringLiteral(rhs.value));
+                i++;
+            } else if (expect(i, 'symbol', '[')) {
+                i++;
+                let v = noIdentifier;
+                noIdentifier = false;
+                let rhs = parseExpression();
+                noIdentifier = v;
+                expectError(i, 'symbol', ']');
+                current = ast.indexExpression(current, rhs);
+                i++;
+            } else {
+                break;
+            }
+        }
         
         return current;
     }
@@ -431,8 +453,10 @@ function parse(tokens) {
     }
 
 
-
+    let noIdentifier = false;
+    let noExtendedIdentifier = false;
     function parseExtendedIdentifier() {
+        noExtendedIdentifier = true;
         // call when i is on the first identifier in the chain
         let current = ast.identifier(tokens[i].value);
         i++;
@@ -444,7 +468,10 @@ function parse(tokens) {
                 i++;
             } else if (expect(i, 'symbol', '[')) {
                 i++;
+                let v = noIdentifier;
+                noIdentifier = false;
                 let rhs = parseExpression();
+                noIdentifier = v;
                 expectError(i, 'symbol', ']');
                 current = ast.indexExpression(current, rhs);
                 i++;
@@ -452,6 +479,7 @@ function parse(tokens) {
                 break;
             }
         }
+        noExtendedIdentifier = false;
         return current;
     }
 
@@ -489,7 +517,6 @@ function parse(tokens) {
         i = oldI;
         return i2;
     }
-    let noIdentifier = false;
 
 
 
@@ -543,6 +570,10 @@ function parse(tokens) {
                         i = originalI;
                         return parseExpressionOrPipe();
                     }
+                // TODO: ADD EXTENDED IDENTIFIER HERE?
+                // } else if (!noExtendedIdentifier && length == 1 && expect(identifiersI, 'symbol', '[')) {
+                //     i = identifiersI;
+                //     return parseExtendedIdentifier();
                 } else if (!noArrow && (expect(identifiersI, 'operator', '->') || expect(extendedIdentifiersI, 'operator', '->'))) {
                     i++;
                     // forgeneric or lambda or (pipe but irrelevant)
@@ -999,6 +1030,8 @@ function parse(tokens) {
             nextNode = false;
         }
     }
+
+    assignParents(out);
 
     return out;
 }

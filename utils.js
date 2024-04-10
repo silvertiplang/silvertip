@@ -49,8 +49,16 @@ function assignParents(ast) {
     function recurse(node) {
         for (const [k, v] of Object.entries(node)) {
             if (typeof v == 'object') {
-                v.parent = node;
-                recurse(node);
+                if (Array.isArray(v)) {
+                    for (let i = 0; i < v.length; i++) {
+                        let a = v[i];
+                        recurse(a);
+                        a.parent = node;
+                    }
+                } else {
+                    recurse(v);
+                    v.parent = node;
+                }
             }
         }
     }
