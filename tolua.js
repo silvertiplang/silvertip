@@ -1,7 +1,7 @@
 /*
-    tojs
+    tolua
 
-    generate js code from ast
+    generate lua code from ast
 */
 
 const ast = require("./ast");
@@ -10,7 +10,7 @@ const { generateASTDecode, error } = require("./utils");
 
 let typeMap = generateASTDecode(ast);
 
-function tojs(ast) {
+function tolua(ast) {
     // traverse ast and output
     let out = '';
     let globals = {};
@@ -21,11 +21,11 @@ function tojs(ast) {
                 break;
             }
             case 'continueStatement': {
-                out += 'continue';
+                // TODO
+                // out += 'continue';
                 break;
             }
             case 'returnStatement': {
-                // TODO: 2 args
                 out += 'return ';
                 recurseList(node.arguments);
                 break;
@@ -37,105 +37,113 @@ function tojs(ast) {
             case 'ifClause': {
                 out += 'if(';
                 recurse(node.condition);
-                out += '){';
+                out += ')then ';
                 recurseBody(node.body);
-                out += '}';
+                out += ' end';
                 break;
             }
             case 'elseIfClause': {
-                out += 'else if(';
+                out += 'elseif(';
                 recurse(node.condition);
-                out += '){';
+                out += ')then ';
                 recurseBody(node.body);
-                out += '}';
+                out += ' end';
                 break;
             }
             case 'elseClause': {
-                out += 'else{';
+                out += 'else ';
                 recurseBody(node.body);
-                out += '}';
+                out += ' end';
                 break;
             }
             case 'whileStatement': {
                 out += 'while(';
                 recurse(node.condition);
-                out += '){';
+                out += ')do ';
                 recurseBody(node.body);
-                out += '}';
+                out += ' end';
                 break;
             }
             case 'repeatStatement': {
-                out += 'do{';
+                out += 'repeat ';
                 recurseBody(node.body);
-                out += '}while(!';
+                out += 'until ';
                 recurse(node.condition);
-                out += ')';
                 break;
             }
             case 'localStatement': {
-                out += 'let ';
+                out += 'local ';
                 for (let i = 0; i < node.variables.length; i++) {
                     let variable = node.variables[i];
-                    let init = node.init[i];
-                    if (init) {
-                        recurse(variable);
-                        out += '=';
-                        recurse(init);
-                    } else {
-                        recurse(variable);
-                    }
+                    recurse(variable);
                     if (i != node.variables.length - 1) {
+                        out += ',';
+                    }
+                }
+                out += '=';
+                for (let i = 0; i < node.init.length; i++) {
+                    let init = node.init[i];
+                    recurse(init);
+                    if (i != node.init.length - 1) {
                         out += ',';
                     }
                 }
                 break;
             }
             case 'globalStatement': {
+                // out += '';
                 for (let i = 0; i < node.variables.length; i++) {
                     let variable = node.variables[i];
-                    let init = node.init[i];
-                    globals[variable.name] = true; // DIRTY
-                    if (init) {
-                        recurse(variable);
-                        out += '=';
-                        recurse(init);
-                    } else {
-                        recurse(variable);
-                    }
+                    recurse(variable);
                     if (i != node.variables.length - 1) {
+                        out += ',';
+                    }
+                }
+                out += '=';
+                for (let i = 0; i < node.init.length; i++) {
+                    let init = node.init[i];
+                    recurse(init);
+                    if (i != node.init.length - 1) {
                         out += ',';
                     }
                 }
                 break;
             }
             case 'assignmentStatement': {
-                let length = node.variables.length < node.init.length ? node.variables.length : node.init.length;
-                for (let i = 0; i < length; i++) {
+                for (let i = 0; i < node.variables.length; i++) {
                     let variable = node.variables[i];
-                    let init = node.init[i];
                     recurse(variable);
-                    out += '=';
+                    if (i != node.variables.length - 1) {
+                        out += ',';
+                    }
+                }
+                out += '=';
+                for (let i = 0; i < node.init.length; i++) {
+                    let init = node.init[i];
                     recurse(init);
-                    if (i != length - 1) {
-                        out += ';';
+                    if (i != node.init.length - 1) {
+                        out += ',';
                     }
                 }
                 break;
             }
             case 'operationAssignment': {
-                // TODO: Optimize
-                
-                let length = node.variables.length < node.init.length ? node.variables.length : node.init.length;
-                for (let i = 0; i < length; i++) {
+                for (let i = 0; i < node.variables.length; i++) {
                     let variable = node.variables[i];
-                    let init = node.init[i];
                     recurse(variable);
-                    out += node.operation;
-                    // TODO: ||, && fix
-                    out += '=';
+                    if (i != node.variables.length - 1) {
+                        out += ',';
+                    }
+                }
+                out += '=';
+                let operation = node.operation;
+                for (let i = 0; i < node.init.length; i++) {
+                    let variable = node.variables[i];
+                    out += variable + operation;
+                    let init = node.init[i];
                     recurse(init);
-                    if (i != length - 1) {
-                        out += ';';
+                    if (i != node.init.length - 1) {
+                        out += ',';
                     }
                 }
                 break;
@@ -148,35 +156,33 @@ function tojs(ast) {
                 break;
             }
             case 'forNumericStatement': {
-                out += 'for(let ';
+                out += 'for ';
                 recurse(node.variable);
                 out += '=';
                 recurse(node.start);
-                out += ';';
-                recurse(node.variable);
-                out += '<=';
+                out += ',';
                 recurse(node.end);
-                out += ';';
-                recurse(node.variable);
-                out += '+=';
+                out += ',';
                 recurse(node.step);
-                out += '){';
+                out += ' do ';
                 recurseBody(node.body);
-                out += '}';
+                out += ' end';
                 break;
             }
             case 'forGenericStatement': {
-                out += 'for(const[';
+                out += 'for ';
                 if (node.keyVariable) {
                     recurse(node.keyVariable);
+                } else {
+                    out += '____________________UNUSED_';
                 }
                 out += ',';
                 recurse(node.valueVariable);
-                out += ']of Object.entries(';
+                out += ' in pairs(';
                 recurse(node.objectVariable);
-                out += ')){';
+                out += ')do ';
                 recurseBody(node.body);
-                out += '}';
+                out += ' end';
                 break;
             }
             case 'chunk': {
@@ -184,9 +190,10 @@ function tojs(ast) {
                 break;
             }
             case 'asyncStatement': {
-                out += '(async()=>{';
-                recurseBody(node.body);
-                out += '})()';
+                // TODO
+                // out += '(async()=>{';
+                // recurseBody(node.body);
+                // out += '})()';
                 break;
             }
             case 'identifier': {
@@ -211,7 +218,7 @@ function tojs(ast) {
                 break;
             }
             case 'nullLiteral': {
-                out += 'null';
+                out += 'nil';
                 break;
             }
             case 'varargLiteral': {
@@ -221,14 +228,14 @@ function tojs(ast) {
             case 'tableEntry': {
                 out += '[';
                 recurse(node.key);
-                out += ']:';
+                out += ']=';
                 recurse(node.value);
                 break;
             }
             case 'arrayConstructorExpression': {
-                out += '[';
+                out += '{[0]=';
                 recurseList(node.list);
-                out += ']';
+                out += '}';
                 break;
             }
             case 'tableConstructorExpression': {
@@ -268,11 +275,11 @@ function tojs(ast) {
                 break;
             }
             case 'lambdaExpression': {
-                out += '(';
+                out += 'function(';
                 recurseList(node.parameters);
-                out += ')=>{';
+                out += ')';
                 recurseBody(node.body);
-                out += '}'
+                out += ' end'
                 break;
             }
             case 'comment': {
@@ -306,17 +313,11 @@ function tojs(ast) {
         for (let i = 0; i < list.length; i++) {
             recurse(list[i]);
             if (i != list.length - 1) {
-                out += ';';
+                out += ' ';
             }
         }
     }
 
-    out += 'const _G={};';
-
-    // silvertip js runtime
-    out += `// silvertip js runtime
-print = console.log;
-`
 
     recurse(ast);
 
@@ -325,4 +326,4 @@ print = console.log;
 
 
 
-module.exports = tojs;
+module.exports = tolua;
