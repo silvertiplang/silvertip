@@ -620,7 +620,7 @@ function parse(tokens) {
                         // Pipe
 
                         // NEVERMIND IT WON'T BE PROCESSED LATER
-                        i--;
+                        i = extendedIdentifiersI;
                         // console.log(tokens[i - 1])
                         // console.log(extendedIdentifiers, tokens[i])
                         return parsePipe(extendedIdentifiers);

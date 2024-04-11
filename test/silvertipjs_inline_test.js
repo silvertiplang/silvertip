@@ -35,10 +35,12 @@ local a = -a()
 
 // local a = a()[1][1].as
 
-a -> a -> a -> a -> a -> a
+// a -> a -> a -> a -> a -> a
 
-2, 3 -> local a, b
-local a, b = a(), 2
+// 2, 3 -> local a, b
+// local a, b = a(), 2
+
+a, b -> a
 `
 
 // silvertipjs(data);
