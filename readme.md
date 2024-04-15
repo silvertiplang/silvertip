@@ -1,6 +1,5 @@
 TODO:
 - change &= to &&=, |= to ||=
-- use context (is expecting statement?) in lex to resolve lambda/pipe a -> b
 
 
 # silvertip: A fast, concise, and easy to use language that compiles to C++ with automatic type inference.
