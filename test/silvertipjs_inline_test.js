@@ -40,7 +40,7 @@ local a = -a()
 // 2, 3 -> local a, b
 // local a, b = a(), 2
 
-a, b -> a
+// a, b -> a
 `
 
 // silvertipjs(data);

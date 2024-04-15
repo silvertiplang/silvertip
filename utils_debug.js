@@ -42,4 +42,23 @@ function printAST(ast) {
     console.log(s);
 }
 
+// function printASTTree(ast) {
+//     let out = '';
+//     function recurse(node, level) {
+//         level++;
+//         for (const [k, v] of Object.entries(node)) {
+//             if (typeof v == 'object') {
+//                 if (Array.isArray(v)) {
+
+//                 } else {
+                    
+//                 }
+//             }
+//         }
+//     }
+
+//     recurse(ast, 0);
+//     return out;
+// }
+
 module.exports = {printToken, printTokens, concatTokens, printAST};
